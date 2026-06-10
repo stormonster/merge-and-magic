@@ -8,41 +8,58 @@ export function initializeGitIntegration(
   state: GameState,
   onNewCommit: () => Promise<void>
 ): void {
-  const gitExtension = vscode.extensions.getExtension('vscode.git')?.exports;
-  if (!gitExtension) {
-    return;
+  try {
+    const ext = vscode.extensions.getExtension('vscode.git');
+    if (!ext) return;
+
+    // Activate the Git extension if needed, then wire up listeners.
+    const activateAndSetup = async () => {
+      try {
+        if (!ext.isActive) {
+          await ext.activate();
+        }
+
+        const api = (ext.exports as any)?.getAPI ? (ext.exports as any).getAPI(1) : undefined;
+        if (!api) return;
+
+        const watchRepository = (repo: any) => {
+          try {
+            repo.state.onDidChange(async () => {
+              try {
+                const head = repo.state.HEAD;
+                if (!head || !head.commit) return;
+
+                if (state.cooldowns.lastCommitHash === head.commit) return;
+
+                const now = Date.now();
+                const last = state.cooldowns.lastEncounterAt ? Date.parse(state.cooldowns.lastEncounterAt) : 0;
+                if (now - last < COMMIT_ENCOUNTER_COOLDOWN_MS) return;
+
+                state.cooldowns.lastCommitHash = head.commit;
+                state.cooldowns.lastEncounterAt = new Date().toISOString();
+                await onNewCommit();
+              } catch (e) {
+                // swallow errors from handlers
+              }
+            });
+          } catch (e) {
+            // ignore
+          }
+        };
+
+        try {
+          api.onDidOpenRepository?.((repo: any) => watchRepository(repo));
+          api.repositories?.forEach((repo: any) => watchRepository(repo));
+        } catch (e) {
+          // ignore
+        }
+      } catch (e) {
+        // ignore activation errors
+      }
+    };
+
+    void activateAndSetup();
+  } catch (e) {
+    // ignore any unexpected errors to avoid breaking activation
   }
-
-  const api = gitExtension.getAPI(1);
-  if (!api) {
-    return;
-  }
-
-  api.onDidOpenRepository((repo: any) => watchRepository(repo, state, onNewCommit), null, context.subscriptions);
-  api.repositories.forEach((repo: any) => watchRepository(repo, state, onNewCommit));
-}
-
-function watchRepository(repo: any, state: GameState, onNewCommit: () => Promise<void>) {
-  const repository = repo;
-
-  repository.state.onDidChange(async () => {
-    const head = repository.state.HEAD;
-    if (!head || !head.commit) {
-      return;
-    }
-
-    if (state.cooldowns.lastCommitHash === head.commit) {
-      return;
-    }
-
-    const now = Date.now();
-    const last = state.cooldowns.lastEncounterAt ? Date.parse(state.cooldowns.lastEncounterAt) : 0;
-    if (now - last < COMMIT_ENCOUNTER_COOLDOWN_MS) {
-      return;
-    }
-
-    state.cooldowns.lastCommitHash = head.commit;
-    state.cooldowns.lastEncounterAt = new Date().toISOString();
-    await onNewCommit();
-  });
 }

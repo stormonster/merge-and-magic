@@ -28,13 +28,34 @@
         "command": "mergeMagic.resetSave",
         "title": "Merge & Magic: Reset Save"
       }
+      ,
+      {
+        "command": "mergeMagic.openSidebar",
+        "title": "Merge & Magic: Open Sidebar"
+      }
     ]
+    ,
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "mergeMagicContainer",
+          "title": "Merge & Magic",
+          "icon": "assets/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "mergeMagicContainer": [
+        {
+          "id": "mergeMagic.sidebarView",
+          "name": "Merge & Magic",
+          "type": "webview"
+        }
+      ]
+    }
   },
   "activationEvents": [
-    "onCommand:mergeMagic.openPanel",
-    "onCommand:mergeMagic.triggerEncounter",
-    "onCommand:mergeMagic.dropTestLoot",
-    "onCommand:mergeMagic.resetSave"
+    "*"
   ],
   "main": "./out/extension.js",
   "scripts": {

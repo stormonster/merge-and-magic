@@ -3,15 +3,18 @@ import { GameState, EquipmentSlotType } from './game/types';
 import { createInitialGameState } from './game/state';
 import { loadGameState, saveGameState } from './storage/save';
 import { RpgWebviewPanel } from './ui/webviewPanel';
+import { SidebarViewProvider } from './ui/sidebarView';
 import { initializeGitIntegration } from './git/gitIntegration';
 import { resetGameState, triggerEncounter, triggerTestLoot, toggleEquipmentSlotLock } from './game/engine';
 
 let currentState: GameState;
 let panel: RpgWebviewPanel | undefined;
+let sidebarProvider: SidebarViewProvider | undefined;
 
 async function updateState(context: vscode.ExtensionContext) {
   await saveGameState(context, currentState);
   panel?.postState(currentState);
+  sidebarProvider?.refresh(currentState);
 }
 
 function handleWebviewMessage(message: unknown, context: vscode.ExtensionContext) {
@@ -52,6 +55,7 @@ function handleWebviewMessage(message: unknown, context: vscode.ExtensionContext
 }
 
 export async function activate(context: vscode.ExtensionContext) {
+  console.log('Merge & Magic activating');
   currentState = await loadGameState(context);
 
   context.subscriptions.push(
@@ -75,9 +79,20 @@ export async function activate(context: vscode.ExtensionContext) {
       updateState(context);
       panel?.reveal();
     })
+    ,
+    vscode.commands.registerCommand('mergeMagic.openSidebar', async () => {
+      console.log('mergeMagic.openSidebar command invoked');
+      await vscode.commands.executeCommand('workbench.view.extension.mergeMagicContainer');
+    })
   );
 
-  panel = RpgWebviewPanel.createOrShow(context.extensionUri, context, currentState, (message) => handleWebviewMessage(message, context));
+  // Do not auto-open the full webview panel on activation — user may prefer sidebar only.
+  // The panel will be created when the user runs the `mergeMagic.openPanel` command.
+
+  // Register sidebar provider for the Explorer view
+  sidebarProvider = new SidebarViewProvider(context.extensionUri, currentState, (message) => handleWebviewMessage(message, context));
+  context.subscriptions.push(vscode.window.registerWebviewViewProvider('mergeMagic.sidebarView', sidebarProvider));
+
   initializeGitIntegration(context, currentState, async () => {
     triggerEncounter(currentState);
     await updateState(context);
