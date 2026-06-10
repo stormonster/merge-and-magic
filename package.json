@@ -1,0 +1,51 @@
+{
+  "name": "merge-and-magic",
+  "displayName": "Merge & Magic",
+  "description": "A VS Code extension that turns development activity into auto-loot RPG progression.",
+  "version": "0.0.1",
+  "publisher": "merge-magic",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "mergeMagic.openPanel",
+        "title": "Merge & Magic: Open Panel"
+      },
+      {
+        "command": "mergeMagic.triggerEncounter",
+        "title": "Merge & Magic: Trigger Encounter"
+      },
+      {
+        "command": "mergeMagic.dropTestLoot",
+        "title": "Merge & Magic: Drop Test Loot"
+      },
+      {
+        "command": "mergeMagic.resetSave",
+        "title": "Merge & Magic: Reset Save"
+      }
+    ]
+  },
+  "activationEvents": [
+    "onCommand:mergeMagic.openPanel",
+    "onCommand:mergeMagic.triggerEncounter",
+    "onCommand:mergeMagic.dropTestLoot",
+    "onCommand:mergeMagic.resetSave"
+  ],
+  "main": "./out/extension.js",
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./tsconfig.json",
+    "watch": "tsc -watch -p ./tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.80.0",
+    "tslib": "^2.6.0",
+    "typescript": "^5.5.0"
+  }
+}

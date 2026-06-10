@@ -1,0 +1,63 @@
+import { EquipmentSlotType, EquipmentSlot, GameState, PlayerStats } from './types';
+
+const EQUIPMENT_SLOTS: EquipmentSlotType[] = [
+  'helmet',
+  'chest',
+  'gloves',
+  'boots',
+  'weapon',
+  'offhand',
+  'amulet',
+  'ring1',
+  'ring2'
+];
+
+const BASE_PLAYER_STATS: PlayerStats = {
+  focus: 5,
+  debugging: 5,
+  architecture: 5,
+  velocity: 5,
+  resilience: 5,
+  luck: 5
+};
+
+export function createInitialEquipment(): Record<EquipmentSlotType, EquipmentSlot> {
+  return Object.fromEntries(
+    EQUIPMENT_SLOTS.map((slot) => [slot, { slot, locked: false, item: null }])
+  ) as Record<EquipmentSlotType, EquipmentSlot>;
+}
+
+export function createInitialGameState(): GameState {
+  return {
+    version: 1,
+    player: {
+      level: 1,
+      xp: 0,
+      gold: 0,
+      baseStats: { ...BASE_PLAYER_STATS },
+      equipment: createInitialEquipment()
+    },
+    log: [
+      {
+        id: crypto.randomUUID(),
+        createdAt: new Date().toISOString(),
+        type: 'system',
+        message: 'Adventure started. Lock to protect. Unlock to gamble.'
+      }
+    ],
+    cooldowns: {
+      lastEncounterAt: null,
+      lastCommitHash: null
+    }
+  };
+}
+
+export function addLogEntry(state: GameState, type: GameState['log'][0]['type'], message: string) {
+  state.log.unshift({
+    id: crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
+    type,
+    message
+  });
+  state.log = state.log.slice(0, 100);
+}

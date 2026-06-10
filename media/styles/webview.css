@@ -1,0 +1,226 @@
+:root {
+  color-scheme: dark;
+  font-family: Arial, Helvetica, sans-serif;
+  background: #111114;
+  color: #dedede;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+}
+
+.page {
+  width: 100%;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.hero p {
+  margin: 4px 0 0;
+  color: #a5a5a5;
+}
+
+.controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.action-button {
+  background: #27272b;
+  color: #f4f4f5;
+  border: 1px solid #3f3f46;
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.action-button:hover {
+  background: #3f3f46;
+}
+
+.status-panel {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.status-card {
+  background: #1f1f24;
+  border: 1px solid #333338;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.status-card div:first-child {
+  color: #9ca3af;
+  margin-bottom: 6px;
+}
+
+.status-value {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.equipment-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.slot-card {
+  background: #18181b;
+  border: 1px solid #333338;
+  border-radius: 14px;
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.slot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.lock-button {
+  background: #27272b;
+  border: 1px solid #3f3f46;
+  color: #f4f4f5;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.item-icon {
+  width: 100%;
+  height: 100px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #111111;
+  border-radius: 12px;
+}
+
+.item-icon img {
+  max-width: 64px;
+  max-height: 64px;
+}
+
+.item-name {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.slot-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #b4b4b8;
+}
+
+.slot-meta.empty {
+  color: #8b8b8f;
+}
+
+.slot-stats {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.stat {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #d4d4d8;
+}
+
+.log-panel {
+  background: #16161a;
+  border: 1px solid #333338;
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.log-panel h2 {
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+
+.log-list {
+  display: grid;
+  gap: 10px;
+}
+
+.log-entry {
+  padding: 10px 12px;
+  background: #1f1f24;
+  border: 1px solid #2f2f35;
+  border-radius: 10px;
+}
+
+.log-system {
+  color: #9d9dff;
+}
+
+.log-encounter {
+  color: #f9c74f;
+}
+
+.log-loot_equipped {
+  color: #7adf7a;
+}
+
+.log-loot_missed {
+  color: #f87171;
+}
+
+.log-level_up {
+  color: #4ade80;
+}
+
+.rarity-common {
+  border-color: #6b7280;
+}
+
+.rarity-uncommon {
+  border-color: #34d399;
+}
+
+.rarity-rare {
+  border-color: #60a5fa;
+}
+
+.rarity-epic {
+  border-color: #c084fc;
+}
+
+.rarity-legendary {
+  border-color: #fbbf24;
+}
+
+.rarity-mythic {
+  border-color: #f472b6;
+}
+
+.empty-slot {
+  border-color: #52525b;
+}
