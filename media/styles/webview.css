@@ -1,8 +1,8 @@
 :root {
   color-scheme: dark;
-  font-family: Arial, Helvetica, sans-serif;
-  background: #111114;
-  color: #dedede;
+  font-family: Inter, Arial, Helvetica, sans-serif;
+  background: #0e0e12;
+  color: #e3e3e8;
 }
 
 body {
@@ -12,215 +12,251 @@ body {
 
 .page {
   width: 100%;
-  padding: 16px;
+  padding: 14px 12px;
   box-sizing: border-box;
 }
 
-.hero {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.hero h1 {
-  margin: 0;
-  font-size: 24px;
-}
-
-.hero p {
-  margin: 4px 0 0;
-  color: #a5a5a5;
-}
-
-.controls {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.action-button {
-  background: #27272b;
-  color: #f4f4f5;
-  border: 1px solid #3f3f46;
-  border-radius: 6px;
-  padding: 8px 12px;
-  cursor: pointer;
-}
-
-.action-button:hover {
-  background: #3f3f46;
-}
-
-.status-panel {
+.top-panel {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 10px;
+  margin-bottom: 14px;
 }
 
-.status-card {
-  background: #1f1f24;
-  border: 1px solid #333338;
-  border-radius: 12px;
-  padding: 14px;
+.brand-block {
+  display: grid;
+  gap: 4px;
+  padding: 12px 12px 10px;
+  border: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.02);
+  border-radius: 14px;
 }
 
-.status-card div:first-child {
+.brand-title {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.brand-subtitle {
+  font-size: 12px;
   color: #9ca3af;
-  margin-bottom: 6px;
 }
 
-.status-value {
-  font-size: 18px;
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.stat-pill {
+  background: #141418;
+  border: 1px solid #292a30;
+  border-radius: 12px;
+  padding: 8px 8px;
+}
+
+@media (max-width: 360px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .brand-block {
+    padding: 10px 10px 8px;
+  }
+}
+
+.stat-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #8b8b9b;
+}
+
+.stat-value {
+  margin-top: 4px;
+  font-size: 14px;
   font-weight: 700;
 }
 
 .equipment-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.slot-card {
-  background: #18181b;
-  border: 1px solid #333338;
-  border-radius: 14px;
-  padding: 14px;
-  display: grid;
-  gap: 10px;
-}
-
-.slot-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-}
-
-.lock-button {
-  background: #27272b;
-  border: 1px solid #3f3f46;
-  color: #f4f4f5;
-  padding: 6px 10px;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.item-icon {
-  width: 100%;
-  height: 100px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: #111111;
-  border-radius: 12px;
-}
-
-.item-icon img {
-  max-width: 64px;
-  max-height: 64px;
-}
-
-.item-name {
-  font-weight: 700;
-  font-size: 14px;
-}
-
-.slot-meta {
-  display: flex;
-  justify-content: space-between;
-  font-size: 13px;
-  color: #b4b4b8;
-}
-
-.slot-meta.empty {
-  color: #8b8b8f;
-}
-
-.slot-stats {
-  display: grid;
   gap: 6px;
-  margin-top: 8px;
+  margin-bottom: 8px;
+  grid-template-columns: repeat(3, 48px);
+  justify-content: start;
+  grid-auto-rows: 48px;
 }
 
-.stat {
+.row {
+  display: contents;
+}
+
+.equip-slot {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border: 1px solid #22222a;
+  border-radius: 12px;
+  padding: 0;
+  overflow: visible;
+  background: #111116;
+  cursor: pointer;
+  transition: border-color 0.18s ease, transform 0.18s ease;
+}
+
+.equip-slot:hover {
+  border-color: #5b5bf5;
+  transform: translateY(-1px);
+  z-index: 10;
+}
+
+.slot-art {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.slot-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.26;
+  filter: blur(0.2px);
+}
+
+.slot-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-items: end;
+  padding: 4px 5px;
+}
+
+.overlay-title {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #9ca3af;
+}
+
+.overlay-meta {
   display: flex;
   justify-content: space-between;
-  font-size: 13px;
-  color: #d4d4d8;
+  gap: 6px;
+  font-size: 10px;
+  color: #b2b2c6;
+}
+
+.custom-tooltip {
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-12px);
+  opacity: 0;
+  pointer-events: none;
+  background: rgba(12,13,19,0.98);
+  border: 1px solid rgba(255,255,255,0.14);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.32);
+  color: #f3f3f7;
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 10px;
+  line-height: 1.3;
+  white-space: nowrap;
+  z-index: 9999;
+  transition: opacity 0.14s ease, transform 0.14s ease;
+}
+
+.equip-slot:hover .custom-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.lock-state {
+  color: #a6a6ff;
+}
+
+.lock-state {
+  color: #a6a6ff;
+}
+
+.lock-state {
+  color: #a6a6ff;
 }
 
 .log-panel {
-  background: #16161a;
-  border: 1px solid #333338;
+  background: #101016;
+  border: 1px solid #262631;
   border-radius: 14px;
-  padding: 16px;
+  padding: 12px;
 }
 
-.log-panel h2 {
-  margin-top: 0;
-  margin-bottom: 12px;
+.log-title {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #e3e3e8;
 }
 
 .log-list {
   display: grid;
-  gap: 10px;
+  gap: 8px;
+  max-height: 220px;
 }
 
 .log-entry {
-  padding: 10px 12px;
-  background: #1f1f24;
-  border: 1px solid #2f2f35;
-  border-radius: 10px;
+  padding: 10px 10px;
+  background: #15151b;
+  border: 1px solid #252536;
+  border-radius: 12px;
+  font-size: 11px;
+  line-height: 1.35;
 }
 
 .log-system {
-  color: #9d9dff;
+  color: #8b89ff;
 }
 
 .log-encounter {
-  color: #f9c74f;
+  color: #f7c64f;
 }
 
 .log-loot_equipped {
-  color: #7adf7a;
+  color: #7bdc7d;
 }
 
 .log-loot_missed {
-  color: #f87171;
+  color: #f57878;
 }
 
 .log-level_up {
-  color: #4ade80;
+  color: #6dd17c;
 }
 
 .rarity-common {
-  border-color: #6b7280;
+  border-color: #5f6770;
 }
 
 .rarity-uncommon {
-  border-color: #34d399;
+  border-color: #3dcf8a;
 }
 
 .rarity-rare {
-  border-color: #60a5fa;
+  border-color: #4f8cff;
 }
 
 .rarity-epic {
-  border-color: #c084fc;
+  border-color: #9a5cff;
 }
 
 .rarity-legendary {
-  border-color: #fbbf24;
+  border-color: #ffcf4f;
 }
 
 .rarity-mythic {
-  border-color: #f472b6;
+  border-color: #f76bcb;
 }
 
 .empty-slot {
-  border-color: #52525b;
+  border-color: #3b3f4c;
 }

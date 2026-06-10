@@ -1,41 +1,57 @@
 import * as vscode from 'vscode';
-import { GameState, EquipmentSlot, Rarity } from '../game/types';
+import { GameState, EquipmentSlot, EquipmentSlotType, Rarity } from '../game/types';
 
-function toTitle(value: string) {
-  return value.replace(/([A-Z])/g, ' $1').replace(/\b\w/g, (match) => match.toUpperCase());
-}
+const slotLabels: Record<EquipmentSlotType, string> = {
+  helmet: 'Helmet',
+  chest: 'Chest',
+  gloves: 'Gloves',
+  boots: 'Boots',
+  weapon: 'Weapon',
+  offhand: 'Offhand',
+  amulet: 'Amulet',
+  ring1: 'Ring',
+  ring2: 'Ring'
+};
 
 function getRarityClass(rarity: Rarity): string {
   return `rarity-${rarity}`;
 }
 
-function renderStatList(stats: Record<string, number>) {
-  return Object.entries(stats)
-    .map(([key, value]) => `<div class="stat"><span>${toTitle(key)}</span><span>+${value}</span></div>`)
-    .join('');
+function getSlotLabel(slot: EquipmentSlotType) {
+  return slotLabels[slot] || slot.replace(/([A-Z])/g, ' $1').replace(/\b\w/g, (match) => match.toUpperCase());
 }
 
-function renderSlotCard(slot: EquipmentSlot, iconBaseUri: vscode.Uri) {
+function computePowerScore(state: GameState) {
+  const baseStats = Object.values(state.player.baseStats).reduce((sum, value) => sum + value, 0);
+  const equipStats = Object.values(state.player.equipment).reduce((sum, slot) => {
+    if (!slot.item) return sum;
+    return sum + Object.values(slot.item.stats).reduce((inner, value) => inner + (value || 0), 0);
+  }, 0);
+  return Math.max(1, Math.floor(baseStats + equipStats + state.player.level * 4));
+}
+
+function renderSlotButton(slot: EquipmentSlot, iconUri: vscode.Uri) {
   const item = slot.item;
-  const itemIcon = item ? `${iconBaseUri.toString()}` : '';
-  const itemName = item ? item.name : 'Empty';
   const rarityClass = item ? getRarityClass(item.rarity) : 'empty-slot';
-  const itemDetails = item
-    ? `<div class="slot-meta"> <span class="rarity">${item.rarity}</span> <span>ilvl ${item.itemLevel}</span> </div> <div class="slot-stats">${renderStatList(item.stats)}</div>`
-    : '<div class="slot-meta empty">No item equipped</div>';
+  const slotName = getSlotLabel(slot.slot);
+  const itemName = item ? item.name : 'Empty';
+  const detail = item ? `ilvl ${item.itemLevel}` : 'Empty';
+  const tooltip = `${itemName}`;
 
   return `
-    <div class="slot-card ${rarityClass}">
-      <div class="slot-header">
-        <div>${toTitle(slot.slot)}</div>
-        <button class="lock-button" data-slot="${slot.slot}">${slot.locked ? '🔒' : '🔓'}</button>
+    <button class="equip-slot ${rarityClass}" data-slot="${slot.slot}">
+      <div class="slot-art">
+        <img src="${iconUri.toString()}" alt="${itemName}" />
+        <div class="slot-overlay">
+          <div class="overlay-title">${slotName}</div>
+          <div class="overlay-meta">
+            <span>${detail}</span>
+            <span class="lock-state">${slot.locked ? '🔒' : '🔓'}</span>
+          </div>
+        </div>
       </div>
-      <div class="item-icon">
-        <img src="${itemIcon}" alt="${itemName}" />
-      </div>
-      <div class="item-name">${itemName}</div>
-      ${itemDetails}
-    </div>
+      <div class="custom-tooltip">${tooltip}</div>
+    </button>
   `;
 }
 
@@ -43,17 +59,23 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
   const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'styles', 'webview.css'));
   const iconUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'assets', 'placeholder.png'));
 
-  const slotsHtml = Object.values(state.player.equipment)
-    .map((slot) => renderSlotCard(slot, iconUri))
-    .join('');
+  const slots = [
+    state.player.equipment.helmet,
+    state.player.equipment.chest,
+    state.player.equipment.weapon,
+    state.player.equipment.offhand,
+    state.player.equipment.boots,
+    state.player.equipment.gloves,
+    state.player.equipment.ring1,
+    state.player.equipment.ring2,
+    state.player.equipment.amulet
+  ];
 
-  const unlockedSlots = Object.values(state.player.equipment).filter((slot) => !slot.locked).length;
-  const lockedSlots = Object.values(state.player.equipment).filter((slot) => slot.locked).length;
-  const greedBonus = Math.min(0.95, unlockedSlots * 0.02);
-  const lockDebuff = Math.min(0.75, lockedSlots * 0.01);
-  const xpForNext = 50 + state.player.level * state.player.level * 25;
+  const equipmentButtons = slots.map((slot) => renderSlotButton(slot, iconUri));
+  const greedBonus = Math.min(0.95, Object.values(state.player.equipment).filter((slot) => !slot.locked).length * 0.02);
+  const powerScore = computePowerScore(state);
 
-  const logHtml = state.log
+  const logHtml = state.log.slice(0, 5)
     .map((entry) => `<div class="log-entry log-${entry.type}"><span>${entry.message}</span></div>`)
     .join('');
 
@@ -67,56 +89,44 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
 </head>
 <body>
   <div class="page">
-    <header class="hero">
-      <div>
-        <h1>Merge & Magic</h1>
-        <p>Level ${state.player.level} · XP ${state.player.xp}/${xpForNext} · Gold ${state.player.gold}</p>
+    <section class="top-panel">
+      <div class="brand-block">
+        <div class="brand-title">Merge & Magic</div>
+        <div class="brand-subtitle">RPG Sidebar</div>
       </div>
-      <div class="controls">
-        <button class="action-button" data-action="triggerEncounter">Trigger Encounter</button>
-        <button class="action-button" data-action="dropTestLoot">Drop Test Loot</button>
-        <button class="action-button" data-action="resetSave">Reset Save</button>
-      </div>
-    </header>
-
-    <section class="status-panel">
-      <div class="status-card">
-        <div>Greed Bonus</div>
-        <div class="status-value">+${(greedBonus * 100).toFixed(0)}%</div>
-      </div>
-      <div class="status-card">
-        <div>Lock Debuff</div>
-        <div class="status-value">-${(lockDebuff * 100).toFixed(0)}%</div>
-      </div>
-      <div class="status-card">
-        <div>Unlocked Slots</div>
-        <div class="status-value">${unlockedSlots}</div>
-      </div>
-      <div class="status-card">
-        <div>Locked Slots</div>
-        <div class="status-value">${lockedSlots}</div>
+      <div class="stats-grid">
+        <div class="stat-pill">
+          <div class="stat-label">Level</div>
+          <div class="stat-value">${state.player.level}</div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-label">Power</div>
+          <div class="stat-value">${powerScore}</div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-label">Greed</div>
+          <div class="stat-value">+${Math.round(greedBonus * 100)}%</div>
+        </div>
       </div>
     </section>
 
-    <section class="equipment-grid">${slotsHtml}</section>
+    <section class="equipment-grid">
+      ${equipmentButtons.join('')}
+    </section>
 
     <section class="log-panel">
-      <h2>Activity Log</h2>
+      <div class="log-title">Recent Activity</div>
       <div class="log-list">${logHtml}</div>
     </section>
   </div>
 
   <script>
     const vscode = acquireVsCodeApi();
-    document.querySelectorAll('.lock-button').forEach((button) => {
-      button.addEventListener('click', () => {
-        vscode.postMessage({ type: 'toggleSlotLock', slot: button.dataset.slot });
-      });
-    });
 
-    document.querySelectorAll('.action-button').forEach((button) => {
+    document.querySelectorAll('.equip-slot').forEach((button) => {
       button.addEventListener('click', () => {
-        vscode.postMessage({ type: button.dataset.action });
+        const slot = button.dataset.slot;
+        vscode.postMessage({ type: 'toggleSlotLock', slot });
       });
     });
   </script>
