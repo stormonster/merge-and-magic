@@ -5,7 +5,7 @@ const COMMIT_ENCOUNTER_COOLDOWN_MS = 5 * 60 * 1000;
 
 export function initializeGitIntegration(
   context: vscode.ExtensionContext,
-  state: GameState,
+  getState: () => GameState,
   onNewCommit: (commitHash: string) => Promise<void>
 ): void {
   try {
@@ -29,17 +29,21 @@ export function initializeGitIntegration(
                 const head = repo.state.HEAD;
                 if (!head || !head.commit) return;
 
+                const state = getState();
                 if (state.cooldowns.lastCommitHash === head.commit) return;
 
                 const now = Date.now();
                 const last = state.cooldowns.lastEncounterAt ? Date.parse(state.cooldowns.lastEncounterAt) : 0;
-                if (now - last < COMMIT_ENCOUNTER_COOLDOWN_MS) return;
+                if (now - last < COMMIT_ENCOUNTER_COOLDOWN_MS) {
+                  console.log('Merge & Magic git commit trigger skipped: cooldown active');
+                  return;
+                }
 
                 state.cooldowns.lastCommitHash = head.commit;
                 state.cooldowns.lastEncounterAt = new Date().toISOString();
                 await onNewCommit(head.commit);
               } catch (e) {
-                // swallow errors from handlers
+                console.error('Merge & Magic git commit trigger failed', e);
               }
             });
           } catch (e) {

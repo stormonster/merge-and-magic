@@ -97,7 +97,7 @@ export function handleLootDrop(player: Player, item: Item): LootResult {
     return {
       type: 'missed',
       item,
-      message: `🔒 Missed: ${item.name} · ${item.rarity} · ilvl ${item.itemLevel}. Reason: ${item.slot} slot was locked.`
+      message: `Missed: ${item.name}.`
     };
   }
 
@@ -109,7 +109,7 @@ export function handleLootDrop(player: Player, item: Item): LootResult {
     item,
     replacedItem,
     message: replacedItem
-      ? `⚔ Equipped: ${item.name} · ${item.rarity} · ilvl ${item.itemLevel}. Replaced: ${replacedItem.name}.`
-      : `⚔ Equipped: ${item.name} · ${item.rarity} · ilvl ${item.itemLevel}.`
+      ? `Equipped: ${item.name}. Replaced: ${replacedItem.name}.`
+      : `Equipped: ${item.name}.`
   };
 }

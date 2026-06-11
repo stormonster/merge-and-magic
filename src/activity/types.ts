@@ -1,5 +1,6 @@
 export type ActivityEventType =
   | 'manual_encounter'
+  | 'manual_loot'
   | 'git_commit'
   | 'tests_passed'
   | 'merge_completed'
