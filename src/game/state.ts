@@ -70,3 +70,23 @@ export function addLogEntry(state: GameState, type: GameState['log'][0]['type'],
   });
   state.log = state.log.slice(0, 100);
 }
+
+export function upsertLogEntryByPrefix(
+  state: GameState,
+  prefix: string,
+  type: GameState['log'][0]['type'],
+  message: string
+) {
+  const existingIndex = state.log.findIndex((entry) => entry.message.startsWith(prefix));
+  const existing = state.log[existingIndex];
+  if (existing) {
+    existing.createdAt = new Date().toISOString();
+    existing.type = type;
+    existing.message = message;
+    state.log.splice(existingIndex, 1);
+    state.log.unshift(existing);
+    return;
+  }
+
+  addLogEntry(state, type, message);
+}

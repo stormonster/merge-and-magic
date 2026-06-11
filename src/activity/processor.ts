@@ -1,5 +1,5 @@
 import { triggerEncounter, triggerTestLoot } from '../game/engine';
-import { addLogEntry } from '../game/state';
+import { addLogEntry, upsertLogEntryByPrefix } from '../game/state';
 import { GameState } from '../game/types';
 import { applyPassiveHealing, healToFull, isHealing } from '../game/health';
 import { ActivityEvent, ActivityEventInput } from './types';
@@ -32,10 +32,19 @@ export async function processActivityEvent(
   input: ActivityEventInput,
   options?: ProcessActivityOptions
 ): Promise<ActivityEvent> {
-  const healedPassively = applyPassiveHealing(state);
+  const passiveHealing = applyPassiveHealing(state);
   const healingActive = isHealing(state);
 
-  if (healedPassively && options?.afterLog) {
+  if (passiveHealing.completed) {
+    upsertLogEntryByPrefix(
+      state,
+      'Recovery started.',
+      'system',
+      `Recovery complete. HP restored to ${state.player.hp}/${state.player.maxHp}.`
+    );
+  }
+
+  if (passiveHealing.changed && options?.afterLog) {
     await options.afterLog();
   }
 
@@ -55,7 +64,7 @@ export async function processActivityEvent(
     case 'git_commit':
       if (event.type === 'git_commit' && healingActive) {
         healToFull(state);
-        addLogEntry(state, 'system', 'Commit landed. HP restored to full.');
+        upsertLogEntryByPrefix(state, 'Recovery started.', 'system', 'Commit landed. HP restored to full.');
         if (options?.afterLog) {
           await options.afterLog();
         }

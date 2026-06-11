@@ -1,6 +1,6 @@
 import { GameState, EquipmentSlotType } from './types';
 import { addLogEntry, createInitialGameState } from './state';
-import { getTotalStats } from './combat';
+import { calculateWinChance } from './combat';
 import { applyXp } from './progression';
 import { handleLootDrop, createItem, selectItemRarity, getGreedBonus } from './loot';
 import { pickRandomEnemy } from './encounters';
@@ -74,7 +74,7 @@ export async function triggerEncounter(state: GameState, options?: ActivityTrigg
     await addTimedLogEntry(
       state,
       'system',
-      `❌ Defeat: ${enemy.name} avoided permanent loss. Took ${damage} damage. HP ${state.player.hp}/${state.player.maxHp}.`,
+      `❌ Defeat: ${enemy.name} dealt ${damage} damage.`,
       options
     );
     if (startHealingIfNeeded(state)) {
@@ -111,19 +111,4 @@ export async function triggerEncounter(state: GameState, options?: ActivityTrigg
     `${lootResult.message}\nTrigger: ${getTriggerLabel(options)}`,
     options
   );
-}
-
-function calculateWinChance(player: GameState['player'], enemy: { level: number; hp: number; attack: number; defense: number }) {
-  const stats = getTotalStats(player);
-  const playerPower =
-    player.level * 5 +
-    stats.focus * 1.2 +
-    stats.debugging * 1.5 +
-    stats.architecture * 1.1 +
-    stats.velocity * 1.0 +
-    stats.resilience * 1.3 +
-    stats.luck * 0.8;
-
-  const enemyPower = enemy.level * 5 + enemy.hp * 0.5 + enemy.attack * 2 + enemy.defense;
-  return Math.min(0.9, Math.max(0.1, playerPower / (playerPower + enemyPower)));
 }

@@ -7,6 +7,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
   private _view?: vscode.WebviewView;
   private state: GameState;
   private messageCallback: (message: unknown) => void;
+  private rendered = false;
 
   constructor(private readonly extensionUri: vscode.Uri, initialState: GameState, messageCallback: (message: unknown) => void) {
     this.state = initialState;
@@ -34,6 +35,11 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
     if (state) this.state = state;
     if (!this._view) return;
     this._view.title = 'Merge & Magic';
-    this._view.webview.html = getWebviewContent(this.extensionUri, this._view.webview, this.state);
+    if (!this.rendered) {
+      this._view.webview.html = getWebviewContent(this.extensionUri, this._view.webview, this.state);
+      this.rendered = true;
+      return;
+    }
+    void this._view.webview.postMessage({ type: 'stateUpdate', state: this.state });
   }
 }

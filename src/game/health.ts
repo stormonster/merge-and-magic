@@ -5,24 +5,29 @@ import { clamp } from './random';
 export const HEALING_DURATION_MS = 3 * 60 * 1000;
 const MIN_RECOVERY_HP = 1;
 
-export function applyPassiveHealing(state: GameState, now = Date.now()): boolean {
+export type PassiveHealingResult = {
+  changed: boolean;
+  completed: boolean;
+};
+
+export function applyPassiveHealing(state: GameState, now = Date.now()): PassiveHealingResult {
   const healingStartedAt = state.cooldowns.healingStartedAt;
   if (!healingStartedAt) {
-    return false;
+    return { changed: false, completed: false };
   }
 
   const startedAt = Date.parse(healingStartedAt);
   if (!Number.isFinite(startedAt)) {
     state.cooldowns.healingStartedAt = new Date(now).toISOString();
     state.player.hp = Math.max(MIN_RECOVERY_HP, state.player.hp);
-    return true;
+    return { changed: true, completed: false };
   }
 
   const elapsed = now - startedAt;
   if (elapsed >= HEALING_DURATION_MS) {
     state.player.hp = state.player.maxHp;
     state.cooldowns.healingStartedAt = null;
-    return true;
+    return { changed: true, completed: true };
   }
 
   const progress = clamp(elapsed / HEALING_DURATION_MS, 0, 1);
@@ -30,7 +35,7 @@ export function applyPassiveHealing(state: GameState, now = Date.now()): boolean
   const nextHp = clamp(Math.max(state.player.hp, recoveredHp), MIN_RECOVERY_HP, state.player.maxHp);
   const changed = nextHp !== state.player.hp;
   state.player.hp = nextHp;
-  return changed;
+  return { changed, completed: false };
 }
 
 export function isHealing(state: GameState): boolean {

@@ -123,19 +123,19 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
       <div class="stats-grid">
         <div class="stat-pill">
           <div class="stat-label">Level</div>
-          <div class="stat-value">${state.player.level}</div>
+          <div class="stat-value" data-top-stat="level">${state.player.level}</div>
         </div>
         <div class="stat-pill">
           <div class="stat-label">Power</div>
-          <div class="stat-value">${powerScore}</div>
+          <div class="stat-value" data-top-stat="power">${powerScore}</div>
         </div>
         <div class="stat-pill">
           <div class="stat-label">HP</div>
-          <div class="stat-value">${state.player.hp}/${state.player.maxHp}</div>
+          <div class="stat-value" data-top-stat="hp">${state.player.hp}/${state.player.maxHp}</div>
         </div>
         <div class="stat-pill">
           <div class="stat-label">Greed</div>
-          <div class="stat-value">+${Math.round(greedBonus * 100)}%</div>
+          <div class="stat-value" data-top-stat="greed">+${Math.round(greedBonus * 100)}%</div>
         </div>
       </div>
     </section>
@@ -162,13 +162,13 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
       </div>
     </section>
 
-    <section class="equipment-grid">
+    <section class="equipment-grid" data-section="equipment">
       ${equipmentButtons.join('')}
     </section>
 
     <section class="log-panel">
       <div class="log-title">Recent Activity</div>
-      <div class="log-list">${logHtml}</div>
+      <div class="log-list" data-section="log">${logHtml}</div>
     </section>
   </div>
 
@@ -176,7 +176,13 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
     const vscode = acquireVsCodeApi();
     const FOCUS_TARGET_MS = ${FOCUS_TARGET_MS};
     const COMMIT_ENCOUNTER_COOLDOWN_MS = ${COMMIT_ENCOUNTER_COOLDOWN_MS};
+    const ITEM_ICON_URI = '${iconUri.toString()}';
+    const SLOT_ORDER = ['helmet', 'chest', 'weapon', 'offhand', 'boots', 'gloves', 'ring1', 'ring2', 'amulet'];
+    const SLOT_LABELS = ${JSON.stringify(slotLabels)};
     let currentState = ${serializedState};
+    let lastTopStatsKey = '';
+    let lastEquipmentKey = '';
+    let lastLogKey = '';
 
     function clampPercent(value) {
       return Math.max(0, Math.min(100, Math.round(value)));
@@ -196,6 +202,15 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
       return 50 + level * level * 25;
     }
 
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
     function setText(selector, value) {
       const element = document.querySelector(selector);
       if (element) {
@@ -208,6 +223,42 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
       if (element) {
         element.style.width = clampPercent(percent) + '%';
       }
+    }
+
+    function computePowerScore(state) {
+      const baseStats = Object.values(state.player.baseStats).reduce((sum, value) => sum + value, 0);
+      const equipStats = Object.values(state.player.equipment).reduce((sum, slot) => {
+        if (!slot.item) {
+          return sum;
+        }
+        return sum + Object.values(slot.item.stats).reduce((inner, value) => inner + (value || 0), 0);
+      }, 0);
+      return Math.max(1, Math.floor(baseStats + equipStats + state.player.level * 4));
+    }
+
+    function getGreedBonus(state) {
+      const unlockedSlots = Object.values(state.player.equipment).filter((slot) => !slot.locked).length;
+      return Math.min(0.95, unlockedSlots * 0.02);
+    }
+
+    function getSlotLabel(slot) {
+      return SLOT_LABELS[slot] || slot;
+    }
+
+    function renderTopStats(force) {
+      const state = currentState;
+      const powerScore = computePowerScore(state);
+      const greedBonus = getGreedBonus(state);
+      const key = [state.player.level, powerScore, state.player.hp, state.player.maxHp, greedBonus].join(':');
+      if (!force && key === lastTopStatsKey) {
+        return;
+      }
+
+      lastTopStatsKey = key;
+      setText('[data-top-stat="level"]', state.player.level);
+      setText('[data-top-stat="power"]', powerScore);
+      setText('[data-top-stat="hp"]', state.player.hp + '/' + state.player.maxHp);
+      setText('[data-top-stat="greed"]', '+' + Math.round(greedBonus * 100) + '%');
     }
 
     function updateStatus() {
@@ -226,12 +277,81 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
       setText('[data-status="commit"]', commitCooldownMs > 0 ? formatDuration(commitCooldownMs) : 'Ready');
     }
 
-    document.querySelectorAll('.equip-slot').forEach((button) => {
-      button.addEventListener('click', () => {
-        const slot = button.dataset.slot;
-        vscode.postMessage({ type: 'toggleSlotLock', slot });
+    function renderSlotButton(slot) {
+      const item = slot.item;
+      const rarityClass = item ? 'rarity-' + item.rarity : 'empty-slot';
+      const slotName = getSlotLabel(slot.slot);
+      const itemName = item ? item.name : 'Empty';
+      const detail = item ? 'ilvl ' + item.itemLevel : 'Empty';
+      return [
+        '<button class="equip-slot ' + rarityClass + '" data-slot="' + escapeHtml(slot.slot) + '">',
+        '<div class="slot-art">',
+        '<img src="' + ITEM_ICON_URI + '" alt="' + escapeHtml(itemName) + '" />',
+        '<div class="slot-overlay">',
+        '<div class="overlay-title">' + escapeHtml(slotName) + '</div>',
+        '<div class="overlay-meta">',
+        '<span>' + escapeHtml(detail) + '</span>',
+        '<span class="lock-state">' + (slot.locked ? '🔒' : '🔓') + '</span>',
+        '</div>',
+        '</div>',
+        '</div>',
+        '<div class="custom-tooltip">' + escapeHtml(itemName) + '</div>',
+        '</button>'
+      ].join('');
+    }
+
+    function bindEquipmentButtons() {
+      document.querySelectorAll('.equip-slot').forEach((button) => {
+        button.addEventListener('click', () => {
+          const slot = button.dataset.slot;
+          vscode.postMessage({ type: 'toggleSlotLock', slot });
+        });
       });
-    });
+    }
+
+    function renderEquipment(force) {
+      const slots = SLOT_ORDER.map((slot) => currentState.player.equipment[slot]);
+      const key = JSON.stringify(slots.map((slot) => ({
+        slot: slot.slot,
+        locked: slot.locked,
+        itemId: slot.item ? slot.item.id : null
+      })));
+      if (!force && key === lastEquipmentKey) {
+        return;
+      }
+
+      lastEquipmentKey = key;
+      const container = document.querySelector('[data-section="equipment"]');
+      if (!container) {
+        return;
+      }
+      container.innerHTML = slots.map(renderSlotButton).join('');
+      bindEquipmentButtons();
+    }
+
+    function renderLog(force) {
+      const entries = currentState.log.slice(0, 10);
+      const key = JSON.stringify(entries.map((entry) => [entry.id, entry.createdAt, entry.type, entry.message]));
+      if (!force && key === lastLogKey) {
+        return;
+      }
+
+      lastLogKey = key;
+      const container = document.querySelector('[data-section="log"]');
+      if (!container) {
+        return;
+      }
+      container.innerHTML = entries
+        .map((entry) => '<div class="log-entry log-' + escapeHtml(entry.type) + '"><span>' + escapeHtml(entry.message) + '</span></div>')
+        .join('');
+    }
+
+    function renderState(force) {
+      renderTopStats(force);
+      updateStatus();
+      renderEquipment(force);
+      renderLog(force);
+    }
 
     window.addEventListener('message', (event) => {
       const message = event.data;
@@ -239,10 +359,10 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
         return;
       }
       currentState = message.state;
-      updateStatus();
+      renderState(false);
     });
 
-    updateStatus();
+    renderState(true);
     setInterval(updateStatus, 1000);
   </script>
 </body>

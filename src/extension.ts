@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { GameState, EquipmentSlotType } from './game/types';
-import { addLogEntry, createInitialGameState } from './game/state';
+import { addLogEntry, createInitialGameState, upsertLogEntryByPrefix } from './game/state';
 import { loadGameState, saveGameState } from './storage/save';
 import { RpgWebviewPanel } from './ui/webviewPanel';
 import { SidebarViewProvider } from './ui/sidebarView';
@@ -104,7 +104,15 @@ async function handleWebviewMessage(message: unknown, context: vscode.ExtensionC
 export async function activate(context: vscode.ExtensionContext) {
   console.log('Merge & Magic activating');
   currentState = await loadGameState(context);
-  applyPassiveHealing(currentState);
+  const initialHealing = applyPassiveHealing(currentState);
+  if (initialHealing.completed) {
+    upsertLogEntryByPrefix(
+      currentState,
+      'Recovery started.',
+      'system',
+      `Recovery complete. HP restored to ${currentState.player.hp}/${currentState.player.maxHp}.`
+    );
+  }
 
   context.subscriptions.push(
     vscode.commands.registerCommand('mergeMagic.openPanel', async () => {
@@ -187,7 +195,19 @@ export async function activate(context: vscode.ExtensionContext) {
   );
 
   const healingTimer = setInterval(() => {
-    if (!currentState || !applyPassiveHealing(currentState)) {
+    if (!currentState) {
+      return;
+    }
+    const passiveHealing = applyPassiveHealing(currentState);
+    if (passiveHealing.completed) {
+      upsertLogEntryByPrefix(
+        currentState,
+        'Recovery started.',
+        'system',
+        `Recovery complete. HP restored to ${currentState.player.hp}/${currentState.player.maxHp}.`
+      );
+    }
+    if (!passiveHealing.changed) {
       return;
     }
     void updateState(context);

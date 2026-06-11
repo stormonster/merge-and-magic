@@ -27,6 +27,7 @@ export class RpgWebviewPanel {
       vscode.ViewColumn.One,
       {
         enableScripts: true,
+        retainContextWhenHidden: true,
         localResourceRoots: [vscode.Uri.joinPath(extensionUri, 'media'), vscode.Uri.joinPath(extensionUri, 'assets')]
       }
     );
@@ -43,8 +44,7 @@ export class RpgWebviewPanel {
     messageCallback: (message: unknown) => void
   ): RpgWebviewPanel {
     if (RpgWebviewPanel.currentPanel) {
-      RpgWebviewPanel.currentPanel.state = state;
-      RpgWebviewPanel.currentPanel.update();
+      RpgWebviewPanel.currentPanel.postState(state);
       RpgWebviewPanel.currentPanel.panel.reveal(vscode.ViewColumn.One);
       return RpgWebviewPanel.currentPanel;
     }
@@ -55,12 +55,12 @@ export class RpgWebviewPanel {
 
   public reveal() {
     this.panel.reveal(vscode.ViewColumn.One);
-    this.update();
+    this.postState(this.state);
   }
 
   public postState(state: GameState) {
     this.state = state;
-    this.update();
+    void this.panel.webview.postMessage({ type: 'stateUpdate', state: this.state });
   }
 
   private update() {
