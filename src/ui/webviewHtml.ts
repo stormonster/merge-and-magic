@@ -58,6 +58,7 @@ function renderSlotButton(slot: EquipmentSlot, iconUri: vscode.Uri) {
 export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webview, state: GameState): string {
   const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'styles', 'webview.css'));
   const iconUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'assets', 'placeholder.png'));
+  const logoUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'assets', 'placeholder.png'));
 
   const slots = [
     state.player.equipment.helmet,
@@ -90,9 +91,7 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
 <body>
   <div class="page">
     <section class="top-panel">
-      <div class="brand-block">
-        <div class="brand-title">Merge & Magic</div>
-        <div class="brand-subtitle">RPG Sidebar</div>
+      <div class="brand-block" style="background-image: url('${logoUri.toString()}')">
       </div>
       <div class="stats-grid">
         <div class="stat-pill">
