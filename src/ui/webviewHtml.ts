@@ -76,7 +76,7 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
   const greedBonus = Math.min(0.95, Object.values(state.player.equipment).filter((slot) => !slot.locked).length * 0.02);
   const powerScore = computePowerScore(state);
 
-  const logHtml = state.log.slice(0, 5)
+  const logHtml = state.log.slice(0, 10)
     .map((entry) => `<div class="log-entry log-${entry.type}"><span>${entry.message}</span></div>`)
     .join('');
 

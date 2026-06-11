@@ -196,6 +196,7 @@ body {
   border: 1px solid #262631;
   border-radius: 14px;
   padding: 12px;
+  min-height: 320px;
 }
 
 .log-title {
@@ -208,16 +209,29 @@ body {
 .log-list {
   display: grid;
   gap: 8px;
-  max-height: 220px;
+  align-content: start;
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 2px;
 }
 
 .log-entry {
+  min-width: 0;
   padding: 10px 10px;
   background: #15151b;
   border: 1px solid #252536;
   border-radius: 12px;
   font-size: 11px;
   line-height: 1.35;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.log-entry span {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .log-system {
