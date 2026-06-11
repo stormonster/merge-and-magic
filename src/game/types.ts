@@ -82,6 +82,9 @@ export type GameState = {
   player: Player;
   log: GameLogEntry[];
   activityLog: ActivityEvent[];
+  focus: {
+    activeMs: number;
+  };
   cooldowns: {
     lastEncounterAt: string | null;
     lastCommitHash: string | null;

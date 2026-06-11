@@ -65,9 +65,14 @@ export async function processActivityEvent(
     case 'manual_loot':
       await triggerTestLoot(state, activityOptions);
       break;
+    case 'focus_session':
+      addLogEntry(state, 'system', `Focus session completed.\nTrigger: ${event.label}`);
+      if (options?.afterLog) {
+        await options.afterLog();
+      }
+      break;
     case 'tests_passed':
     case 'merge_completed':
-    case 'focus_session':
       addLogEntry(state, 'system', `The party takes note. Rewards for this activity type are coming soon.\nTrigger: ${event.label}`);
       if (options?.afterLog) {
         await options.afterLog();

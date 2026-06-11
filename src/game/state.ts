@@ -50,6 +50,9 @@ export function createInitialGameState(): GameState {
       }
     ],
     activityLog: [],
+    focus: {
+      activeMs: 0
+    },
     cooldowns: {
       lastEncounterAt: null,
       lastCommitHash: null,

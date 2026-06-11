@@ -6,6 +6,7 @@ import { RpgWebviewPanel } from './ui/webviewPanel';
 import { SidebarViewProvider } from './ui/sidebarView';
 import { initializeGitIntegration } from './git/gitIntegration';
 import { processActivityEvent } from './activity/processor';
+import { initializeFocusTracker } from './activity/focusTracker';
 import { resetGameState, toggleEquipmentSlotLock } from './game/engine';
 import { applyPassiveHealing } from './game/health';
 
@@ -192,6 +193,11 @@ export async function activate(context: vscode.ExtensionContext) {
     void updateState(context);
   }, 10 * 1000);
   context.subscriptions.push({ dispose: () => clearInterval(healingTimer) });
+
+  initializeFocusTracker(context, {
+    getState: () => currentState,
+    onStateChanged: () => updateState(context)
+  });
 }
 
 export function deactivate() {

@@ -26,6 +26,9 @@ export async function loadGameState(context: vscode.ExtensionContext): Promise<G
       hp: saved.player.hp || maxHp
     },
     activityLog: saved.activityLog || [],
+    focus: saved.focus || {
+      activeMs: 0
+    },
     cooldowns: {
       ...saved.cooldowns,
       healingStartedAt: saved.cooldowns.healingStartedAt || null

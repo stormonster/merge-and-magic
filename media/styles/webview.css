@@ -85,6 +85,67 @@ body {
   font-weight: 700;
 }
 
+.status-strip {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 12px;
+  padding: 10px;
+  background: #101016;
+  border: 1px solid #262631;
+  border-radius: 8px;
+}
+
+.status-row {
+  display: grid;
+  grid-template-columns: 44px 54px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.compact-status {
+  grid-template-columns: 44px minmax(0, 1fr);
+}
+
+.status-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: #8b8b9b;
+}
+
+.status-value {
+  font-size: 11px;
+  font-weight: 700;
+  color: #e3e3e8;
+  white-space: nowrap;
+}
+
+.status-bar {
+  height: 6px;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #1d1d27;
+}
+
+.status-fill {
+  height: 100%;
+  min-width: 2px;
+  border-radius: inherit;
+}
+
+.hp-fill {
+  background: #f57878;
+}
+
+.xp-fill {
+  background: #f7c64f;
+}
+
+.focus-fill {
+  background: #8b89ff;
+}
+
 .equipment-grid {
   display: grid;
   gap: 6px;
