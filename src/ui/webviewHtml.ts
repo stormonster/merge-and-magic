@@ -103,6 +103,10 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
           <div class="stat-value">${powerScore}</div>
         </div>
         <div class="stat-pill">
+          <div class="stat-label">HP</div>
+          <div class="stat-value">${state.player.hp}/${state.player.maxHp}</div>
+        </div>
+        <div class="stat-pill">
           <div class="stat-label">Greed</div>
           <div class="stat-value">+${Math.round(greedBonus * 100)}%</div>
         </div>

@@ -64,6 +64,8 @@ export type Player = {
   level: number;
   xp: number;
   gold: number;
+  hp: number;
+  maxHp: number;
   baseStats: PlayerStats;
   equipment: Record<EquipmentSlotType, EquipmentSlot>;
 };
@@ -83,5 +85,6 @@ export type GameState = {
   cooldowns: {
     lastEncounterAt: string | null;
     lastCommitHash: string | null;
+    healingStartedAt: string | null;
   };
 };

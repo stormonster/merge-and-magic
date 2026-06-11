@@ -5,6 +5,7 @@ import { applyXp } from './progression';
 import { handleLootDrop, createItem, selectItemRarity, getGreedBonus } from './loot';
 import { pickRandomEnemy } from './encounters';
 import { randomInt } from './random';
+import { calculateDefeatDamage, startHealingIfNeeded } from './health';
 import { ITEM_TEMPLATES } from '../data/itemTemplates';
 
 type ActivityTriggerOptions = {
@@ -68,7 +69,17 @@ export async function triggerEncounter(state: GameState, options?: ActivityTrigg
   await addTimedLogEntry(state, 'encounter', `⚔ Encounter: ${enemy.name} appeared.\nTrigger: ${getTriggerLabel(options)}`, options);
 
   if (!won) {
-    await addTimedLogEntry(state, 'system', `❌ Defeat: ${enemy.name} avoided permanent loss.`, options);
+    const damage = calculateDefeatDamage(state, enemy);
+    state.player.hp = Math.max(1, state.player.hp - damage);
+    await addTimedLogEntry(
+      state,
+      'system',
+      `❌ Defeat: ${enemy.name} avoided permanent loss. Took ${damage} damage. HP ${state.player.hp}/${state.player.maxHp}.`,
+      options
+    );
+    if (startHealingIfNeeded(state)) {
+      await addTimedLogEntry(state, 'system', 'Recovery started. Activities pause while HP returns. A commit restores you immediately.', options);
+    }
     return;
   }
 

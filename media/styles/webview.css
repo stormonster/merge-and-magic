@@ -51,7 +51,7 @@ body {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
 }
 
@@ -59,7 +59,7 @@ body {
   background: #141418;
   border: 1px solid #292a30;
   border-radius: 12px;
-  padding: 8px 8px;
+  padding: 8px 6px;
 }
 
 @media (max-width: 360px) {

@@ -21,6 +21,8 @@ const BASE_PLAYER_STATS: PlayerStats = {
   luck: 5
 };
 
+export const BASE_PLAYER_MAX_HP = 20;
+
 export function createInitialEquipment(): Record<EquipmentSlotType, EquipmentSlot> {
   return Object.fromEntries(
     EQUIPMENT_SLOTS.map((slot) => [slot, { slot, locked: false, item: null }])
@@ -34,6 +36,8 @@ export function createInitialGameState(): GameState {
       level: 1,
       xp: 0,
       gold: 0,
+      hp: BASE_PLAYER_MAX_HP,
+      maxHp: BASE_PLAYER_MAX_HP,
       baseStats: { ...BASE_PLAYER_STATS },
       equipment: createInitialEquipment()
     },
@@ -48,7 +52,8 @@ export function createInitialGameState(): GameState {
     activityLog: [],
     cooldowns: {
       lastEncounterAt: null,
-      lastCommitHash: null
+      lastCommitHash: null,
+      healingStartedAt: null
     }
   };
 }

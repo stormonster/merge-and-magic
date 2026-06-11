@@ -1,21 +1,48 @@
 import * as vscode from 'vscode';
 import { GameState, EquipmentSlotType } from './game/types';
-import { createInitialGameState } from './game/state';
+import { addLogEntry, createInitialGameState } from './game/state';
 import { loadGameState, saveGameState } from './storage/save';
 import { RpgWebviewPanel } from './ui/webviewPanel';
 import { SidebarViewProvider } from './ui/sidebarView';
 import { initializeGitIntegration } from './git/gitIntegration';
 import { processActivityEvent } from './activity/processor';
 import { resetGameState, toggleEquipmentSlotLock } from './game/engine';
+import { applyPassiveHealing } from './game/health';
 
 let currentState: GameState;
 let panel: RpgWebviewPanel | undefined;
 let sidebarProvider: SidebarViewProvider | undefined;
+const GIT_COOLDOWN_LOG_PREFIX = 'Git commit detected. Encounter cooldown active:';
 
 async function updateState(context: vscode.ExtensionContext) {
   await saveGameState(context, currentState);
   panel?.postState(currentState);
   sidebarProvider?.refresh(currentState);
+}
+
+function formatDuration(ms: number): string {
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes <= 0) {
+    return `${seconds}s`;
+  }
+  return `${minutes}m ${seconds}s`;
+}
+
+function upsertGitCooldownLog(state: GameState, remainingMs: number) {
+  const message = `${GIT_COOLDOWN_LOG_PREFIX} ${formatDuration(remainingMs)} remaining.`;
+  const existingIndex = state.log.findIndex((entry) => entry.message.startsWith(GIT_COOLDOWN_LOG_PREFIX));
+  const existing = state.log[existingIndex];
+  if (existing) {
+    existing.createdAt = new Date().toISOString();
+    existing.message = message;
+    state.log.splice(existingIndex, 1);
+    state.log.unshift(existing);
+    return;
+  }
+
+  addLogEntry(state, 'system', message);
 }
 
 async function handleWebviewMessage(message: unknown, context: vscode.ExtensionContext) {
@@ -76,6 +103,7 @@ async function handleWebviewMessage(message: unknown, context: vscode.ExtensionC
 export async function activate(context: vscode.ExtensionContext) {
   console.log('Merge & Magic activating');
   currentState = await loadGameState(context);
+  applyPassiveHealing(currentState);
 
   context.subscriptions.push(
     vscode.commands.registerCommand('mergeMagic.openPanel', async () => {
@@ -130,24 +158,40 @@ export async function activate(context: vscode.ExtensionContext) {
   sidebarProvider = new SidebarViewProvider(context.extensionUri, currentState, (message) => handleWebviewMessage(message, context));
   context.subscriptions.push(vscode.window.registerWebviewViewProvider('mergeMagic.sidebarView', sidebarProvider));
 
-  initializeGitIntegration(context, () => currentState, async (commitHash) => {
-    await processActivityEvent(
-      currentState,
-      {
-        type: 'git_commit',
-        source: 'git',
-        label: 'Git commit',
-        weight: 1,
-        metadata: {
-          commitHash
+  initializeGitIntegration(
+    context,
+    () => currentState,
+    async (commitHash) => {
+      await processActivityEvent(
+        currentState,
+        {
+          type: 'git_commit',
+          source: 'git',
+          label: 'Git commit',
+          weight: 1,
+          metadata: {
+            commitHash
+          }
+        },
+        {
+          afterLog: () => updateState(context)
         }
-      },
-      {
-        afterLog: () => updateState(context)
-      }
-    );
-    await updateState(context);
-  });
+      );
+      await updateState(context);
+    },
+    async (_commitHash, _reason, remainingMs) => {
+      upsertGitCooldownLog(currentState, remainingMs);
+      await updateState(context);
+    }
+  );
+
+  const healingTimer = setInterval(() => {
+    if (!currentState || !applyPassiveHealing(currentState)) {
+      return;
+    }
+    void updateState(context);
+  }, 10 * 1000);
+  context.subscriptions.push({ dispose: () => clearInterval(healingTimer) });
 }
 
 export function deactivate() {
