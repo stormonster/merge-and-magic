@@ -45,6 +45,7 @@ export function createInitialGameState(): GameState {
         message: 'Adventure started. Lock to protect. Unlock to gamble.'
       }
     ],
+    activityLog: [],
     cooldowns: {
       lastEncounterAt: null,
       lastCommitHash: null

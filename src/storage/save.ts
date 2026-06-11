@@ -15,5 +15,9 @@ export async function loadGameState(context: vscode.ExtensionContext): Promise<G
     await saveGameState(context, initial);
     return initial;
   }
-  return saved;
+
+  return {
+    ...saved,
+    activityLog: saved.activityLog || []
+  };
 }

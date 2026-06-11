@@ -6,7 +6,7 @@ const COMMIT_ENCOUNTER_COOLDOWN_MS = 5 * 60 * 1000;
 export function initializeGitIntegration(
   context: vscode.ExtensionContext,
   state: GameState,
-  onNewCommit: () => Promise<void>
+  onNewCommit: (commitHash: string) => Promise<void>
 ): void {
   try {
     const ext = vscode.extensions.getExtension('vscode.git');
@@ -37,7 +37,7 @@ export function initializeGitIntegration(
 
                 state.cooldowns.lastCommitHash = head.commit;
                 state.cooldowns.lastEncounterAt = new Date().toISOString();
-                await onNewCommit();
+                await onNewCommit(head.commit);
               } catch (e) {
                 // swallow errors from handlers
               }

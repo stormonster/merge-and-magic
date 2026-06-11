@@ -1,3 +1,5 @@
+import { ActivityEvent } from '../activity/types';
+
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'mythic';
 
 export type EquipmentSlotType =
@@ -77,6 +79,7 @@ export type GameState = {
   version: number;
   player: Player;
   log: GameLogEntry[];
+  activityLog: ActivityEvent[];
   cooldowns: {
     lastEncounterAt: string | null;
     lastCommitHash: string | null;

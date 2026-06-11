@@ -5,7 +5,8 @@ import { loadGameState, saveGameState } from './storage/save';
 import { RpgWebviewPanel } from './ui/webviewPanel';
 import { SidebarViewProvider } from './ui/sidebarView';
 import { initializeGitIntegration } from './git/gitIntegration';
-import { resetGameState, triggerEncounter, triggerTestLoot, toggleEquipmentSlotLock } from './game/engine';
+import { processActivityEvent } from './activity/processor';
+import { resetGameState, triggerTestLoot, toggleEquipmentSlotLock } from './game/engine';
 
 let currentState: GameState;
 let panel: RpgWebviewPanel | undefined;
@@ -40,7 +41,12 @@ function handleWebviewMessage(message: unknown, context: vscode.ExtensionContext
       updateState(context);
       break;
     case 'triggerEncounter':
-      triggerEncounter(currentState);
+      processActivityEvent(currentState, {
+        type: 'manual_encounter',
+        source: 'command',
+        label: 'Manual encounter triggered',
+        weight: 1
+      });
       updateState(context);
       break;
     case 'dropTestLoot':
@@ -64,7 +70,12 @@ export async function activate(context: vscode.ExtensionContext) {
     }),
     vscode.commands.registerCommand('mergeMagic.triggerEncounter', async () => {
       currentState = currentState || createInitialGameState();
-      triggerEncounter(currentState);
+      processActivityEvent(currentState, {
+        type: 'manual_encounter',
+        source: 'command',
+        label: 'Manual encounter triggered',
+        weight: 1
+      });
       updateState(context);
       panel?.reveal();
     }),
@@ -93,8 +104,16 @@ export async function activate(context: vscode.ExtensionContext) {
   sidebarProvider = new SidebarViewProvider(context.extensionUri, currentState, (message) => handleWebviewMessage(message, context));
   context.subscriptions.push(vscode.window.registerWebviewViewProvider('mergeMagic.sidebarView', sidebarProvider));
 
-  initializeGitIntegration(context, currentState, async () => {
-    triggerEncounter(currentState);
+  initializeGitIntegration(context, currentState, async (commitHash) => {
+    processActivityEvent(currentState, {
+      type: 'git_commit',
+      source: 'git',
+      label: 'Git commit detected',
+      weight: 1,
+      metadata: {
+        commitHash
+      }
+    });
     await updateState(context);
   });
 }
