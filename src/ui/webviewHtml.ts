@@ -48,13 +48,40 @@ function formatDuration(ms: number): string {
   return `${minutes}m ${seconds}s`;
 }
 
+function formatItemStats(item: EquipmentSlot['item']): string {
+  if (!item) {
+    return '';
+  }
+
+  return Object.entries(item.stats)
+    .filter(([, value]) => typeof value === 'number')
+    .map(([stat, value]) => `+${value} ${stat}`)
+    .join(', ');
+}
+
+function renderTooltip(slot: EquipmentSlot, slotName: string): string {
+  const item = slot.item;
+  if (!item) {
+    return `
+      <div class="tooltip-title">${slotName}</div>
+      <div class="tooltip-line">Empty slot</div>
+    `;
+  }
+
+  const statText = formatItemStats(item);
+  return `
+    <div class="tooltip-title">${item.name}</div>
+    <div class="tooltip-line">${slotName} · ilvl ${item.itemLevel}</div>
+    ${statText ? `<div class="tooltip-line">${statText}</div>` : ''}
+  `;
+}
+
 function renderSlotButton(slot: EquipmentSlot, iconUri: vscode.Uri) {
   const item = slot.item;
   const rarityClass = item ? getRarityClass(item.rarity) : 'empty-slot';
   const slotName = getSlotLabel(slot.slot);
   const itemName = item ? item.name : 'Empty';
-  const detail = item ? `ilvl ${item.itemLevel}` : 'Empty';
-  const tooltip = `${itemName}`;
+  const tooltip = renderTooltip(slot, slotName);
 
   return `
     <button class="equip-slot ${rarityClass}" data-slot="${slot.slot}">
@@ -63,12 +90,11 @@ function renderSlotButton(slot: EquipmentSlot, iconUri: vscode.Uri) {
         <div class="slot-overlay">
           <div class="overlay-title">${slotName}</div>
           <div class="overlay-meta">
-            <span>${detail}</span>
             <span class="lock-state">${slot.locked ? '🔒' : '🔓'}</span>
           </div>
         </div>
       </div>
-      <div class="custom-tooltip">${tooltip}</div>
+      <div class="custom-tooltip tooltip-${rarityClass}">${tooltip}</div>
     </button>
   `;
 }
@@ -247,6 +273,33 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
       return SLOT_LABELS[slot] || slot;
     }
 
+    function formatItemStats(item) {
+      if (!item) {
+        return '';
+      }
+      return Object.entries(item.stats)
+        .filter((entry) => typeof entry[1] === 'number')
+        .map((entry) => '+' + entry[1] + ' ' + entry[0])
+        .join(', ');
+    }
+
+    function renderTooltip(slot, slotName) {
+      const item = slot.item;
+      if (!item) {
+        return [
+          '<div class="tooltip-title">' + escapeHtml(slotName) + '</div>',
+          '<div class="tooltip-line">Empty slot</div>'
+        ].join('');
+      }
+
+      const statText = formatItemStats(item);
+      return [
+        '<div class="tooltip-title">' + escapeHtml(item.name) + '</div>',
+        '<div class="tooltip-line">' + escapeHtml(slotName) + ' · ilvl ' + item.itemLevel + '</div>',
+        statText ? '<div class="tooltip-line">' + escapeHtml(statText) + '</div>' : ''
+      ].join('');
+    }
+
     function renderTopStats(force) {
       const state = currentState;
       const powerScore = computePowerScore(state);
@@ -284,7 +337,7 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
       const rarityClass = item ? 'rarity-' + item.rarity : 'empty-slot';
       const slotName = getSlotLabel(slot.slot);
       const itemName = item ? item.name : 'Empty';
-      const detail = item ? 'ilvl ' + item.itemLevel : 'Empty';
+      const tooltip = renderTooltip(slot, slotName);
       return [
         '<button class="equip-slot ' + rarityClass + '" data-slot="' + escapeHtml(slot.slot) + '">',
         '<div class="slot-art">',
@@ -292,12 +345,11 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
         '<div class="slot-overlay">',
         '<div class="overlay-title">' + escapeHtml(slotName) + '</div>',
         '<div class="overlay-meta">',
-        '<span>' + escapeHtml(detail) + '</span>',
         '<span class="lock-state">' + (slot.locked ? '🔒' : '🔓') + '</span>',
         '</div>',
         '</div>',
         '</div>',
-        '<div class="custom-tooltip">' + escapeHtml(itemName) + '</div>',
+        '<div class="custom-tooltip tooltip-' + rarityClass + '">' + tooltip + '</div>',
         '</button>'
       ].join('');
     }
