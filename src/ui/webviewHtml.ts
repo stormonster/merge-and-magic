@@ -118,7 +118,9 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
 <body>
   <div class="page">
     <section class="top-panel">
-      <div class="brand-block" style="background-image: url('${logoUri.toString()}')">
+        <div class="brand-block">
+      <div class="brand-logo" style="background-image: url('${logoUri.toString()}')">
+      </div>
       </div>
       <div class="stats-grid">
         <div class="stat-pill">
