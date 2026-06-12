@@ -48,6 +48,10 @@ function formatDuration(ms: number): string {
   return `${minutes}m ${seconds}s`;
 }
 
+function formatGold(value: number): string {
+  return value.toLocaleString('en-US');
+}
+
 function formatItemStats(item: EquipmentSlot['item']): string {
   if (!item) {
     return '';
@@ -144,9 +148,12 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
 <body>
   <div class="page">
     <section class="top-panel">
-        <div class="brand-block">
-      <div class="brand-logo" style="background-image: url('${logoUri.toString()}')">
-      </div>
+      <div class="brand-block">
+        <div class="brand-logo" style="background-image: url('${logoUri.toString()}')"></div>
+        <div class="gold-balance" aria-label="Gold amount">
+          <div class="gold-label">Gold</div>
+          <div class="gold-value" data-top-stat="gold">${formatGold(state.player.gold)}</div>
+        </div>
       </div>
       <div class="stats-grid">
         <div class="stat-pill">
@@ -224,6 +231,10 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
         return seconds + 's';
       }
       return minutes + 'm ' + seconds + 's';
+    }
+
+    function formatGold(value) {
+      return Number(value || 0).toLocaleString('en-US');
     }
 
     function xpRequiredForNextLevel(level) {
@@ -304,7 +315,7 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
       const state = currentState;
       const powerScore = computePowerScore(state);
       const greedBonus = getGreedBonus(state);
-      const key = [state.player.level, powerScore, state.player.hp, state.player.maxHp, greedBonus].join(':');
+      const key = [state.player.level, powerScore, state.player.hp, state.player.maxHp, greedBonus, state.player.gold].join(':');
       if (!force && key === lastTopStatsKey) {
         return;
       }
@@ -314,6 +325,7 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
       setText('[data-top-stat="power"]', powerScore);
       setText('[data-top-stat="hp"]', state.player.hp + '/' + state.player.maxHp);
       setText('[data-top-stat="greed"]', '+' + Math.round(greedBonus * 100) + '%');
+      setText('[data-top-stat="gold"]', formatGold(state.player.gold));
     }
 
     function updateStatus() {
