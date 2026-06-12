@@ -218,8 +218,8 @@ body {
   gap: 6px;
   margin-bottom: 8px;
   grid-template-columns: repeat(3, 56px);
+  grid-template-rows: repeat(3, 56px);
   justify-content: center;
-  grid-auto-rows: 56px;
 }
 
 .row {
@@ -253,6 +253,51 @@ body {
     0 0 0 1px rgba(160, 106, 53, 0.18);
   transform: translateY(-1px);
   z-index: 10;
+}
+
+.equip-slot[data-slot="amulet"] {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.equip-slot[data-slot="helmet"] {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.equip-slot[data-slot="gloves"] {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.equip-slot[data-slot="weapon"] {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.equip-slot[data-slot="chest"] {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.equip-slot[data-slot="offhand"] {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+.equip-slot[data-slot="ring1"] {
+  grid-column: 1;
+  grid-row: 3;
+}
+
+.equip-slot[data-slot="boots"] {
+  grid-column: 2;
+  grid-row: 3;
+}
+
+.equip-slot[data-slot="ring2"] {
+  grid-column: 3;
+  grid-row: 3;
 }
 
 .slot-art {

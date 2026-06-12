@@ -11,7 +11,7 @@ const slotLabels: Record<EquipmentSlotType, string> = {
   gloves: 'Gloves',
   boots: 'Boots',
   weapon: 'Weapon',
-  offhand: 'Offhand',
+  offhand: 'Shield',
   amulet: 'Amulet',
   ring1: 'Ring',
   ring2: 'Ring'
@@ -109,15 +109,15 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
   const logoUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'assets', 'placeholder.png'));
 
   const slots = [
+    state.player.equipment.amulet,
     state.player.equipment.helmet,
-    state.player.equipment.chest,
-    state.player.equipment.weapon,
-    state.player.equipment.offhand,
-    state.player.equipment.boots,
     state.player.equipment.gloves,
+    state.player.equipment.weapon,
+    state.player.equipment.chest,
+    state.player.equipment.offhand,
     state.player.equipment.ring1,
-    state.player.equipment.ring2,
-    state.player.equipment.amulet
+    state.player.equipment.boots,
+    state.player.equipment.ring2
   ];
 
   const equipmentButtons = slots.map((slot) => renderSlotButton(slot, iconUri));
@@ -212,7 +212,7 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
     const FOCUS_TARGET_MS = ${FOCUS_TARGET_MS};
     const COMMIT_ENCOUNTER_COOLDOWN_MS = ${COMMIT_ENCOUNTER_COOLDOWN_MS};
     const ITEM_ICON_URI = '${iconUri.toString()}';
-    const SLOT_ORDER = ['helmet', 'chest', 'weapon', 'offhand', 'boots', 'gloves', 'ring1', 'ring2', 'amulet'];
+    const SLOT_ORDER = ['amulet', 'helmet', 'gloves', 'weapon', 'chest', 'offhand', 'ring1', 'boots', 'ring2'];
     const SLOT_LABELS = ${JSON.stringify(slotLabels)};
     let currentState = ${serializedState};
     let lastTopStatsKey = '';
