@@ -1,4 +1,4 @@
-import { GameState, EquipmentSlotType } from './types';
+import { GameState, EquipmentSlotType, Item } from './types';
 import { addLogEntry, createInitialGameState } from './state';
 import { calculateWinChance } from './combat';
 import { applyXp } from './progression';
@@ -24,6 +24,36 @@ export function toggleEquipmentSlotLock(player: GameState['player'], slot: Equip
     return;
   }
   target.locked = !target.locked;
+}
+
+function getDebugEquipSlot(state: GameState, item: Item): EquipmentSlotType {
+  if (item.slot !== 'ring1') {
+    return item.slot;
+  }
+
+  if (!state.player.equipment.ring1.item) {
+    return 'ring1';
+  }
+
+  if (!state.player.equipment.ring2.item) {
+    return 'ring2';
+  }
+
+  return 'ring1';
+}
+
+export function equipDebugItem(state: GameState, item: Item): { item: Item; replacedItem: Item | null } {
+  const targetSlot = getDebugEquipSlot(state, item);
+  const slot = state.player.equipment[targetSlot];
+  const equippedItem = { ...item, slot: targetSlot };
+  const replacedItem = slot.item;
+
+  slot.item = equippedItem;
+
+  return {
+    item: equippedItem,
+    replacedItem
+  };
 }
 
 function getTriggerLabel(options?: ActivityTriggerOptions): string {

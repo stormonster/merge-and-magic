@@ -234,11 +234,9 @@ body {
   border-radius: 8px;
   padding: 0;
   overflow: visible;
-  background: #111116;
+  background: transparent;
   cursor: pointer;
-  box-shadow:
-    inset 0 0 0 1px rgba(224, 154, 82, 0.08),
-    inset 0 -10px 16px rgba(24, 12, 6, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(224, 154, 82, 0.08);
   transition:
     border-color 0.18s ease,
     box-shadow 0.18s ease,
@@ -249,7 +247,6 @@ body {
   border-color: #a06a35;
   box-shadow:
     inset 0 0 0 1px rgba(255, 218, 151, 0.16),
-    inset 0 -10px 16px rgba(24, 12, 6, 0.32),
     0 0 0 1px rgba(160, 106, 53, 0.18);
   transform: translateY(-1px);
   z-index: 10;
@@ -309,24 +306,18 @@ body {
 .slot-art img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  opacity: 0.26;
-  filter: blur(0.2px);
+  object-fit: contain;
+  opacity: 1;
+  filter: none;
 }
 
 .slot-overlay {
   position: absolute;
   inset: 0;
-  display: grid;
-  align-items: end;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
   padding: 4px 5px;
-}
-
-.overlay-title {
-  font-size: 9px;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: #9ca3af;
 }
 
 .overlay-meta {

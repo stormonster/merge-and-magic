@@ -37,10 +37,20 @@ export type ItemTemplate = {
   namePrefix: string;
   slot: EquipmentSlotType;
   icon: string;
+  iconPool?: string[];
   statBias: keyof PlayerStats;
 };
 
 export type BaseItemTemplate = Omit<ItemTemplate, 'id'>;
+
+export type UniqueItemTemplate = {
+  id: string;
+  name: string;
+  slot: EquipmentSlotType;
+  icon: string;
+  itemLevel: number;
+  stats: Partial<PlayerStats>;
+};
 
 export type EquipmentSlot = {
   slot: EquipmentSlotType;

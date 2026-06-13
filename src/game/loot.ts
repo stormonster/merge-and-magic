@@ -1,4 +1,4 @@
-import { Item, BaseItemTemplate, Player, Rarity } from './types';
+import { Item, BaseItemTemplate, Player, Rarity, UniqueItemTemplate } from './types';
 import { clamp, randomInt, weightedRandom } from './random';
 
 const BASE_RARITY_WEIGHTS: Record<Rarity, number> = {
@@ -59,6 +59,8 @@ export function createItem(playerLevel: number, rarity: Rarity, template: BaseIt
   const itemLevel = Math.max(1, playerLevel + randomInt(-1, 2));
   const mainStatValue = Math.ceil(itemLevel * RARITY_MULTIPLIER[rarity]);
   const idBase = template.namePrefix.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+  const iconPool = template.iconPool && template.iconPool.length > 0 ? template.iconPool : [template.icon];
+  const icon = iconPool[randomInt(0, iconPool.length - 1)];
 
   return {
     id: `${idBase}_${Date.now()}_${Math.random().toString(36).slice(2)}`,
@@ -66,10 +68,22 @@ export function createItem(playerLevel: number, rarity: Rarity, template: BaseIt
     slot: template.slot,
     rarity,
     itemLevel,
-    icon: template.icon,
+    icon,
     stats: {
       [template.statBias]: mainStatValue
     }
+  };
+}
+
+export function createUniqueLegendaryItem(template: UniqueItemTemplate): Item {
+  return {
+    id: `${template.id}_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+    name: template.name,
+    slot: template.slot,
+    rarity: 'legendary',
+    itemLevel: template.itemLevel,
+    icon: template.icon,
+    stats: { ...template.stats }
   };
 }
 

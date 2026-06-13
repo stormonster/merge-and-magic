@@ -25,16 +25,18 @@
         "title": "Merge & Magic: Drop Test Loot"
       },
       {
+        "command": "mergeMagic.debugEquipUniqueLegendary",
+        "title": "Merge & Magic: Debug Equip Unique Legendary"
+      },
+      {
         "command": "mergeMagic.resetSave",
         "title": "Merge & Magic: Reset Save"
-      }
-      ,
+      },
       {
         "command": "mergeMagic.openSidebar",
         "title": "Merge & Magic: Open Sidebar"
       }
-    ]
-    ,
+    ],
     "viewsContainers": {
       "activitybar": [
         {
@@ -61,11 +63,13 @@
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./tsconfig.json",
+    "slice:items": "node scripts/slice-item-sheets.js",
     "watch": "tsc -watch -p ./tsconfig.json"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.80.0",
+    "sharp": "^0.35.1",
     "tslib": "^2.6.0",
     "typescript": "^5.5.0"
   }

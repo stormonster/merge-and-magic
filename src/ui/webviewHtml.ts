@@ -75,7 +75,8 @@ function renderTooltip(slot: EquipmentSlot, slotName: string): string {
   const statText = formatItemStats(item);
   return `
     <div class="tooltip-title">${item.name}</div>
-    <div class="tooltip-line">${slotName} · ilvl ${item.itemLevel}</div>
+    <div class="tooltip-line">Slot: ${slotName}</div>
+    <div class="tooltip-line">Item level: ${item.itemLevel}</div>
     ${statText ? `<div class="tooltip-line">${statText}</div>` : ''}
   `;
 }
@@ -92,7 +93,6 @@ function renderSlotButton(slot: EquipmentSlot, iconUri: vscode.Uri) {
       <div class="slot-art">
         <img src="${iconUri.toString()}" alt="${itemName}" />
         <div class="slot-overlay">
-          <div class="overlay-title">${slotName}</div>
           <div class="overlay-meta">
             <span class="lock-state">${slot.locked ? '🔒' : '🔓'}</span>
           </div>
@@ -105,7 +105,7 @@ function renderSlotButton(slot: EquipmentSlot, iconUri: vscode.Uri) {
 
 export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webview, state: GameState): string {
   const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'styles', 'webview.css'));
-  const iconUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'assets', 'placeholder.png'));
+  const assetBaseUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'assets'));
   const logoUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'assets', 'placeholder.png'));
 
   const slots = [
@@ -120,7 +120,11 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
     state.player.equipment.ring2
   ];
 
-  const equipmentButtons = slots.map((slot) => renderSlotButton(slot, iconUri));
+  const getIconUri = (slot: EquipmentSlot) => {
+    const iconPath = slot.item?.icon || 'placeholder.png';
+    return webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'assets', ...iconPath.split('/')));
+  };
+  const equipmentButtons = slots.map((slot) => renderSlotButton(slot, getIconUri(slot)));
   const greedBonus = Math.min(0.95, Object.values(state.player.equipment).filter((slot) => !slot.locked).length * 0.02);
   const powerScore = computePowerScore(state);
   const xpRequired = xpRequiredForNextLevel(state.player.level);
@@ -211,7 +215,7 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
     const vscode = acquireVsCodeApi();
     const FOCUS_TARGET_MS = ${FOCUS_TARGET_MS};
     const COMMIT_ENCOUNTER_COOLDOWN_MS = ${COMMIT_ENCOUNTER_COOLDOWN_MS};
-    const ITEM_ICON_URI = '${iconUri.toString()}';
+    const ASSET_BASE_URI = '${assetBaseUri.toString()}';
     const SLOT_ORDER = ['amulet', 'helmet', 'gloves', 'weapon', 'chest', 'offhand', 'ring1', 'boots', 'ring2'];
     const SLOT_LABELS = ${JSON.stringify(slotLabels)};
     let currentState = ${serializedState};
@@ -284,6 +288,11 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
       return SLOT_LABELS[slot] || slot;
     }
 
+    function getIconSrc(icon) {
+      const iconPath = icon || 'placeholder.png';
+      return ASSET_BASE_URI + '/' + iconPath.split('/').map(encodeURIComponent).join('/');
+    }
+
     function formatItemStats(item) {
       if (!item) {
         return '';
@@ -306,7 +315,8 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
       const statText = formatItemStats(item);
       return [
         '<div class="tooltip-title">' + escapeHtml(item.name) + '</div>',
-        '<div class="tooltip-line">' + escapeHtml(slotName) + ' · ilvl ' + item.itemLevel + '</div>',
+        '<div class="tooltip-line">Slot: ' + escapeHtml(slotName) + '</div>',
+        '<div class="tooltip-line">Item level: ' + item.itemLevel + '</div>',
         statText ? '<div class="tooltip-line">' + escapeHtml(statText) + '</div>' : ''
       ].join('');
     }
@@ -350,12 +360,12 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
       const slotName = getSlotLabel(slot.slot);
       const itemName = item ? item.name : 'Empty';
       const tooltip = renderTooltip(slot, slotName);
+      const iconSrc = getIconSrc(item ? item.icon : null);
       return [
         '<button class="equip-slot ' + rarityClass + '" data-slot="' + escapeHtml(slot.slot) + '">',
         '<div class="slot-art">',
-        '<img src="' + ITEM_ICON_URI + '" alt="' + escapeHtml(itemName) + '" />',
+        '<img src="' + iconSrc + '" alt="' + escapeHtml(itemName) + '" />',
         '<div class="slot-overlay">',
-        '<div class="overlay-title">' + escapeHtml(slotName) + '</div>',
         '<div class="overlay-meta">',
         '<span class="lock-state">' + (slot.locked ? '🔒' : '🔓') + '</span>',
         '</div>',

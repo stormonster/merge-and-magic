@@ -7,8 +7,10 @@ import { SidebarViewProvider } from './ui/sidebarView';
 import { initializeGitIntegration } from './git/gitIntegration';
 import { processActivityEvent } from './activity/processor';
 import { initializeFocusTracker } from './activity/focusTracker';
-import { resetGameState, toggleEquipmentSlotLock } from './game/engine';
+import { equipDebugItem, resetGameState, toggleEquipmentSlotLock } from './game/engine';
 import { applyPassiveHealing } from './game/health';
+import { UNIQUE_ITEM_TEMPLATES } from './data/uniqueItems';
+import { createUniqueLegendaryItem } from './game/loot';
 
 let currentState: GameState;
 let panel: RpgWebviewPanel | undefined;
@@ -44,6 +46,36 @@ function upsertGitCooldownLog(state: GameState, remainingMs: number) {
   }
 
   addLogEntry(state, 'system', message);
+}
+
+async function debugEquipUniqueLegendary(context: vscode.ExtensionContext) {
+  currentState = currentState || createInitialGameState();
+  const selection = await vscode.window.showQuickPick(
+    UNIQUE_ITEM_TEMPLATES.map((template) => ({
+      label: template.name,
+      description: template.slot === 'ring1' ? 'ring' : template.slot,
+      detail: Object.entries(template.stats)
+        .map(([stat, value]) => `+${value} ${stat}`)
+        .join(', '),
+      template
+    })),
+    {
+      title: 'Equip Unique Legendary',
+      placeHolder: 'Choose a unique legendary to equip'
+    }
+  );
+
+  if (!selection) {
+    return;
+  }
+
+  const item = createUniqueLegendaryItem(selection.template);
+  const result = equipDebugItem(currentState, item);
+  const replacedText = result.replacedItem ? ` Replaced: ${result.replacedItem.name}.` : '';
+
+  addLogEntry(currentState, 'loot_equipped', `🧪 Debug Unique: Equipped ${result.item.name}.${replacedText}`);
+  await updateState(context);
+  panel?.reveal();
 }
 
 async function handleWebviewMessage(message: unknown, context: vscode.ExtensionContext) {
@@ -147,6 +179,9 @@ export async function activate(context: vscode.ExtensionContext) {
       );
       await updateState(context);
       panel?.reveal();
+    }),
+    vscode.commands.registerCommand('mergeMagic.debugEquipUniqueLegendary', async () => {
+      await debugEquipUniqueLegendary(context);
     }),
     vscode.commands.registerCommand('mergeMagic.resetSave', async () => {
       currentState = resetGameState();
