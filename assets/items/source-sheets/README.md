@@ -22,7 +22,12 @@ Generated item art source sheets for the early loot icon set.
 - `unique-sheet.png`
   - 4x2 sheet
   - 8 unique chase-item icons
-  - One-off legendary/mythic style items
+  - First pass of one-off legendary style items
+
+- `unique-expansion-sheet.png`
+  - 5x4 sheet
+  - 19 unique chase-item icons plus 1 empty cell
+  - Expands the legendary set so every equipment slot has 3 named options
 
 ## Style Direction
 
@@ -30,6 +35,6 @@ Dark fantasy ARPG inventory icons with gritty hand-painted readability, warm bro
 
 These are original assets generated for this project. They are inspired by the broad visual language of classic dark fantasy loot games, not direct copies of any specific game assets.
 
-## Next Step
+## Slicing
 
-Slice these sheets into individual item icons before wiring them into `src/data/itemTemplates.ts`.
+Run `npm run slice:items` to slice these sheets into individual item icons before wiring them into loot data.

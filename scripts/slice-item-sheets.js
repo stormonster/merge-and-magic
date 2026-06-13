@@ -49,6 +49,16 @@ const sheets = [
     rows: 2,
     count: 8,
     insetRatio: 0.01
+  },
+  {
+    source: 'unique-expansion-sheet.png',
+    outputDir: path.join(ROOT, 'assets', 'items', 'unique'),
+    prefix: 'unique',
+    columns: 5,
+    rows: 4,
+    count: 19,
+    startIndex: 9,
+    insetRatio: 0.01
   }
 ];
 
@@ -190,12 +200,11 @@ async function sliceSheet(sheet) {
     throw new Error(`Could not read dimensions for ${sourcePath}`);
   }
 
-  await cleanOutputDir(sheet.outputDir);
-
   for (let index = 0; index < sheet.count; index += 1) {
     const cellBox = getCellBox(metadata, sheet.columns, sheet.rows, index);
     const box = getInnerCellBox(cellBox, sheet.insetRatio);
-    const filename = `${sheet.prefix}-${String(index + 1).padStart(2, '0')}.png`;
+    const outputIndex = (sheet.startIndex || 1) + index;
+    const filename = `${sheet.prefix}-${String(outputIndex).padStart(2, '0')}.png`;
     const outputPath = path.join(sheet.outputDir, filename);
 
     const { data, info } = await sharp(sourcePath)
@@ -226,6 +235,11 @@ async function sliceSheet(sheet) {
 }
 
 async function main() {
+  const outputDirs = [...new Set(sheets.map((sheet) => sheet.outputDir))];
+  for (const outputDir of outputDirs) {
+    await cleanOutputDir(outputDir);
+  }
+
   for (const sheet of sheets) {
     await sliceSheet(sheet);
   }
