@@ -48,6 +48,10 @@ export async function processActivityEvent(
     await options.afterLog();
   }
 
+  if (state.town.inTown) {
+    return createActivityEvent(input);
+  }
+
   if (healingActive && input.type !== 'git_commit') {
     return createActivityEvent(input);
   }

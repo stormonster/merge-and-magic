@@ -245,6 +245,10 @@ async function shouldSkipForCooldown(
   const last = state.cooldowns.lastEncounterAt ? Date.parse(state.cooldowns.lastEncounterAt) : 0;
   const isHealing = state.cooldowns.healingStartedAt !== null && state.player.hp < state.player.maxHp;
 
+  if (state.town.inTown) {
+    return true;
+  }
+
   if (isHealing && activity.type !== 'git_commit') {
     return true;
   }

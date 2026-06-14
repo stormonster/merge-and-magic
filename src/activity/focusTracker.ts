@@ -50,7 +50,7 @@ async function processFocusTick(options: FocusTrackerOptions, activitySeen: bool
   }
 
   const state = options.getState();
-  if (isHealing(state)) {
+  if (state.town.inTown || isHealing(state)) {
     return;
   }
 

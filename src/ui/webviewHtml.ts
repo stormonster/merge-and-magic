@@ -135,6 +135,8 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
   const lastEncounterAt = state.cooldowns.lastEncounterAt ? Date.parse(state.cooldowns.lastEncounterAt) : 0;
   const commitCooldownMs = Math.max(0, COMMIT_ENCOUNTER_COOLDOWN_MS - (Date.now() - lastEncounterAt));
   const commitCooldownLabel = commitCooldownMs > 0 ? formatDuration(commitCooldownMs) : 'Ready';
+  const townButtonLabel = state.town.inTown ? 'Leave town' : 'Go to town';
+  const townStatusLabel = state.town.inTown ? `Shopping · ${state.town.purchases} bought · HP ${state.player.hp}/${state.player.maxHp}` : 'Adventure';
   const serializedState = JSON.stringify(state).replace(/</g, '\\u003c');
 
   const logHtml = state.log.slice(0, 10)
@@ -199,6 +201,11 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
         <div class="status-label">Commit</div>
         <div class="status-value" data-status="commit">${commitCooldownLabel}</div>
       </div>
+    </section>
+
+    <section class="town-panel">
+      <button class="town-button" data-action="town-toggle">${townButtonLabel}</button>
+      <div class="town-status" data-town-status>${townStatusLabel}</div>
     </section>
 
     <section class="equipment-grid" data-section="equipment">
@@ -352,6 +359,8 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
       setText('[data-status="focus"]', focusSeconds + '/60s');
       setWidth('[data-status-fill="focus"]', (state.focus.activeMs / FOCUS_TARGET_MS) * 100);
       setText('[data-status="commit"]', commitCooldownMs > 0 ? formatDuration(commitCooldownMs) : 'Ready');
+      setText('[data-town-status]', state.town.inTown ? 'Shopping · ' + state.town.purchases + ' bought · HP ' + state.player.hp + '/' + state.player.maxHp : 'Adventure');
+      setText('[data-action="town-toggle"]', state.town.inTown ? 'Leave town' : 'Go to town');
     }
 
     function renderSlotButton(slot) {
@@ -428,6 +437,10 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
       renderEquipment(force);
       renderLog(force);
     }
+
+    document.querySelector('[data-action="town-toggle"]')?.addEventListener('click', () => {
+      vscode.postMessage({ type: currentState.town.inTown ? 'leaveTown' : 'enterTown' });
+    });
 
     window.addEventListener('message', (event) => {
       const message = event.data;

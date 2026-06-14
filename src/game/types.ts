@@ -100,4 +100,9 @@ export type GameState = {
     lastCommitHash: string | null;
     healingStartedAt: string | null;
   };
+  town: {
+    inTown: boolean;
+    enteredAt: string | null;
+    purchases: number;
+  };
 };

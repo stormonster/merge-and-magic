@@ -32,6 +32,11 @@ export async function loadGameState(context: vscode.ExtensionContext): Promise<G
     cooldowns: {
       ...saved.cooldowns,
       healingStartedAt: saved.cooldowns.healingStartedAt || null
+    },
+    town: saved.town || {
+      inTown: false,
+      enteredAt: null,
+      purchases: 0
     }
   };
 }

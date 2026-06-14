@@ -213,6 +213,51 @@ body {
   background: #8b89ff;
 }
 
+.town-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 8px;
+  background: #14110e;
+  border: 1px solid var(--rpg-border-soft);
+  border-radius: 8px;
+  box-shadow:
+    inset 0 0 0 1px rgba(224, 154, 82, 0.08),
+    inset 0 -8px 16px rgba(24, 12, 6, 0.22);
+}
+
+.town-button {
+  min-width: 0;
+  border: 1px solid rgba(217, 154, 58, 0.72);
+  border-radius: 8px;
+  padding: 7px 10px;
+  background: #24170d;
+  color: #f7c64f;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 218, 151, 0.1),
+    inset 0 -8px 14px rgba(24, 12, 6, 0.32);
+}
+
+.town-button:hover {
+  border-color: #d99a3a;
+  color: #ffe0a3;
+}
+
+.town-status {
+  justify-self: end;
+  min-width: 0;
+  color: #b4935a;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 .equipment-grid {
   display: grid;
   gap: 6px;

@@ -12,6 +12,7 @@ import { equipDebugItem, resetGameState, toggleEquipmentSlotLock } from './game/
 import { applyPassiveHealing } from './game/health';
 import { UNIQUE_ITEM_TEMPLATES } from './data/uniqueItems';
 import { createUniqueLegendaryItem } from './game/loot';
+import { enterTown, leaveTown, processTownPurchase } from './game/town';
 
 let currentState: GameState;
 let panel: RpgWebviewPanel | undefined;
@@ -131,6 +132,14 @@ async function handleWebviewMessage(message: unknown, context: vscode.ExtensionC
       currentState = resetGameState();
       await updateState(context);
       break;
+    case 'enterTown':
+      enterTown(currentState);
+      await updateState(context);
+      break;
+    case 'leaveTown':
+      leaveTown(currentState);
+      await updateState(context);
+      break;
   }
 }
 
@@ -241,6 +250,16 @@ export async function activate(context: vscode.ExtensionContext) {
     void updateState(context);
   }, 10 * 1000);
   context.subscriptions.push({ dispose: () => clearInterval(healingTimer) });
+
+  const townTimer = setInterval(() => {
+    if (!currentState?.town.inTown) {
+      return;
+    }
+
+    processTownPurchase(currentState);
+    void updateState(context);
+  }, 3 * 1000);
+  context.subscriptions.push({ dispose: () => clearInterval(townTimer) });
 
   initializeFocusTracker(context, {
     getState: () => currentState,

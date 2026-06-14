@@ -57,6 +57,11 @@ export function createInitialGameState(): GameState {
       lastEncounterAt: null,
       lastCommitHash: null,
       healingStartedAt: null
+    },
+    town: {
+      inTown: false,
+      enteredAt: null,
+      purchases: 0
     }
   };
 }
