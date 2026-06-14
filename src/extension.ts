@@ -6,6 +6,7 @@ import { RpgWebviewPanel } from './ui/webviewPanel';
 import { SidebarViewProvider } from './ui/sidebarView';
 import { initializeGitIntegration } from './git/gitIntegration';
 import { processActivityEvent } from './activity/processor';
+import { ActivityEventInput } from './activity/types';
 import { initializeFocusTracker } from './activity/focusTracker';
 import { equipDebugItem, resetGameState, toggleEquipmentSlotLock } from './game/engine';
 import { applyPassiveHealing } from './game/health';
@@ -15,7 +16,7 @@ import { createUniqueLegendaryItem } from './game/loot';
 let currentState: GameState;
 let panel: RpgWebviewPanel | undefined;
 let sidebarProvider: SidebarViewProvider | undefined;
-const GIT_COOLDOWN_LOG_PREFIX = 'Git commit detected. Encounter cooldown active:';
+const GIT_COOLDOWN_LOG_PREFIX = 'Git activity detected. Encounter cooldown active:';
 
 async function updateState(context: vscode.ExtensionContext) {
   await saveGameState(context, currentState);
@@ -33,8 +34,8 @@ function formatDuration(ms: number): string {
   return `${minutes}m ${seconds}s`;
 }
 
-function upsertGitCooldownLog(state: GameState, remainingMs: number) {
-  const message = `${GIT_COOLDOWN_LOG_PREFIX} ${formatDuration(remainingMs)} remaining.`;
+function upsertGitCooldownLog(state: GameState, label: string, remainingMs: number) {
+  const message = `${GIT_COOLDOWN_LOG_PREFIX} ${formatDuration(remainingMs)} remaining. Last trigger: ${label}.`;
   const existingIndex = state.log.findIndex((entry) => entry.message.startsWith(GIT_COOLDOWN_LOG_PREFIX));
   const existing = state.log[existingIndex];
   if (existing) {
@@ -205,26 +206,18 @@ export async function activate(context: vscode.ExtensionContext) {
   initializeGitIntegration(
     context,
     () => currentState,
-    async (commitHash) => {
+    async (activity: ActivityEventInput) => {
       await processActivityEvent(
         currentState,
-        {
-          type: 'git_commit',
-          source: 'git',
-          label: 'Git commit',
-          weight: 1,
-          metadata: {
-            commitHash
-          }
-        },
+        activity,
         {
           afterLog: () => updateState(context)
         }
       );
       await updateState(context);
     },
-    async (_commitHash, _reason, remainingMs) => {
-      upsertGitCooldownLog(currentState, remainingMs);
+    async (activity, remainingMs) => {
+      upsertGitCooldownLog(currentState, activity.label, remainingMs);
       await updateState(context);
     }
   );

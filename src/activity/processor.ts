@@ -62,6 +62,11 @@ export async function processActivityEvent(
   switch (event.type) {
     case 'manual_encounter':
     case 'git_commit':
+    case 'git_branch_switch':
+    case 'git_pull':
+    case 'git_merge':
+    case 'git_conflict':
+    case 'git_stash':
       if (event.type === 'git_commit' && healingActive) {
         healToFull(state);
         upsertLogEntryByPrefix(state, 'Recovery started.', 'system', 'Commit landed. HP restored to full.');
