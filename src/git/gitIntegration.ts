@@ -16,6 +16,8 @@ type GitSnapshot = {
   mergeInProgress: boolean;
   hasConflicts: boolean;
   stashHash: string | null;
+  ahead: number | null;
+  behind: number | null;
 };
 
 type GitActivity = {
@@ -81,6 +83,21 @@ function hasConflictStatus(statusOutput: string | null): boolean {
     .some((line) => /^(DD|AU|UD|UA|DU|AA|UU) /.test(line));
 }
 
+function parseUpstreamDistance(output: string | null): { ahead: number | null; behind: number | null } {
+  if (!output) {
+    return { ahead: null, behind: null };
+  }
+
+  const [behindText, aheadText] = output.trim().split(/\s+/);
+  const behind = Number.parseInt(behindText, 10);
+  const ahead = Number.parseInt(aheadText, 10);
+
+  return {
+    ahead: Number.isFinite(ahead) ? ahead : null,
+    behind: Number.isFinite(behind) ? behind : null
+  };
+}
+
 async function getSnapshot(repo: any): Promise<GitSnapshot | null> {
   const rootPath = getRepoRoot(repo);
   if (!rootPath) {
@@ -92,13 +109,16 @@ async function getSnapshot(repo: any): Promise<GitSnapshot | null> {
   const status = await safeRunGit(rootPath, ['status', '--porcelain=v1']);
   const stashHash = await safeRunGit(rootPath, ['rev-parse', '--verify', '-q', 'refs/stash']);
   const mergeInProgress = await gitPathExists(rootPath, 'MERGE_HEAD');
+  const upstreamDistance = parseUpstreamDistance(await safeRunGit(rootPath, ['rev-list', '--left-right', '--count', '@{upstream}...HEAD']));
 
   return {
     branch,
     head,
     mergeInProgress,
     hasConflicts: hasConflictStatus(status),
-    stashHash
+    stashHash,
+    ahead: upstreamDistance.ahead,
+    behind: upstreamDistance.behind
   };
 }
 
@@ -168,6 +188,18 @@ async function classifyGitActivity(repo: any, previous: GitSnapshot, snapshot: G
       type: 'git_stash',
       label: 'Git stash',
       commitHash: snapshot.head
+    };
+  }
+
+  if (previous.head === snapshot.head && previous.ahead !== null && snapshot.ahead !== null && previous.ahead > snapshot.ahead) {
+    return {
+      type: 'git_push',
+      label: 'Git push',
+      commitHash: snapshot.head,
+      metadata: {
+        previousAhead: previous.ahead,
+        ahead: snapshot.ahead
+      }
     };
   }
 

@@ -64,6 +64,7 @@ export async function processActivityEvent(
     case 'git_commit':
     case 'git_branch_switch':
     case 'git_pull':
+    case 'git_push':
     case 'git_merge':
     case 'git_conflict':
     case 'git_stash':

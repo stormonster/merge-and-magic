@@ -4,6 +4,7 @@ export type ActivityEventType =
   | 'git_commit'
   | 'git_branch_switch'
   | 'git_pull'
+  | 'git_push'
   | 'git_merge'
   | 'git_conflict'
   | 'git_stash'
