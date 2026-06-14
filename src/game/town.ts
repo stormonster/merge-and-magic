@@ -3,6 +3,7 @@ import { createItem, handleLootDrop } from './loot';
 import { randomInt, weightedRandom } from './random';
 import { GameState, Rarity } from './types';
 import { addLogEntry } from './state';
+import { isHealing } from './health';
 
 const TOWN_RARITY_WEIGHTS: Record<Extract<Rarity, 'common' | 'uncommon' | 'rare'>, number> = {
   common: 58,
@@ -31,9 +32,16 @@ export type TownPurchaseResult =
       type: 'not_in_town';
     };
 
-export function enterTown(state: GameState): void {
+export type EnterTownResult = 'entered' | 'already_in_town' | 'healing';
+
+export function enterTown(state: GameState): EnterTownResult {
   if (state.town.inTown) {
-    return;
+    return 'already_in_town';
+  }
+
+  if (isHealing(state)) {
+    addLogEntry(state, 'system', '🏘 The road to town is closed while recovering. A commit restores you immediately.');
+    return 'healing';
   }
 
   state.town = {
@@ -41,8 +49,8 @@ export function enterTown(state: GameState): void {
     enteredAt: new Date().toISOString(),
     purchases: 0
   };
-  state.cooldowns.healingStartedAt = null;
   addLogEntry(state, 'system', `🏘 Entered town. Resting at the inn while shopping.`);
+  return 'entered';
 }
 
 export function leaveTown(state: GameState, reason = 'Left town.'): void {
