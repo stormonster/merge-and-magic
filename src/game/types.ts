@@ -38,6 +38,11 @@ export type ItemTemplate = {
   slot: EquipmentSlotType;
   icon: string;
   iconPool?: string[];
+  visualVariants?: {
+    namePrefix: string;
+    icon: string;
+    noun?: string;
+  }[];
   statBias: keyof PlayerStats;
 };
 
@@ -85,6 +90,10 @@ export type GameLogEntry = {
   createdAt: string;
   type: 'encounter' | 'loot_equipped' | 'loot_missed' | 'level_up' | 'system';
   message: string;
+  highlights?: {
+    text: string;
+    rarity: Rarity;
+  }[];
 };
 
 export type GameState = {

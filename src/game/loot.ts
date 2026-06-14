@@ -28,6 +28,47 @@ const RARITY_MULTIPLIER: Record<Rarity, number> = {
   mythic: 3.6
 };
 
+const NAME_MODIFIERS: Record<Rarity, { prefixes: string[]; suffixes: string[] }> = {
+  common: {
+    prefixes: ['Plain', 'Worn', 'Rusted', 'Dented', 'Simple', 'Patched', 'Scuffed', 'Sturdy', 'Quick', 'Old', 'Field', 'Basic'],
+    suffixes: ['of Practice', 'of Errands', 'of Small Fixes', 'of First Drafts', 'of Routine']
+  },
+  uncommon: {
+    prefixes: ['Polished', 'Keen', 'Steady', 'Tempered', 'Tuned', 'Reinforced', 'Lucky', 'Focused', 'Balanced', 'Responsive'],
+    suffixes: ['of Review', 'of Refactor', 'of Clean Builds', 'of Flow', 'of Momentum', 'of Hotfixes']
+  },
+  rare: {
+    prefixes: ['Arcane', 'Runed', 'Gilded', 'Stormforged', 'Crystal', 'Precise', 'Moonlit', 'Sapphire', 'Emerald', 'Recursive'],
+    suffixes: ['of the Compiler', 'of Deep Focus', 'of the Architect', 'of Hidden Tests', 'of the Merge', 'of Bright Errors']
+  },
+  epic: {
+    prefixes: ['Mythic', 'Radiant', 'Ancient', 'Void-Touched', 'Dragonforged', 'Eldritch'],
+    suffixes: ['of the Infinite Loop', 'of the Final Build', 'of the Silent Branch']
+  },
+  legendary: {
+    prefixes: ['Legendary'],
+    suffixes: []
+  },
+  mythic: {
+    prefixes: ['Mythic'],
+    suffixes: []
+  }
+};
+
+function choose<T>(items: T[]): T {
+  return items[randomInt(0, items.length - 1)];
+}
+
+function createGeneratedItemName(rarity: Rarity, noun: string): string {
+  const modifiers = NAME_MODIFIERS[rarity];
+  const useSuffix = modifiers.suffixes.length > 0 && Math.random() < 0.32;
+  const coreName = useSuffix
+    ? `${noun} ${choose(modifiers.suffixes)}`
+    : `${choose(modifiers.prefixes)} ${noun}`;
+
+  return `${RARITY_LABEL[rarity]} ${coreName}`;
+}
+
 export function getGreedBonus(unlockedSlotCount: number): number {
   return unlockedSlotCount * 0.02;
 }
@@ -58,13 +99,17 @@ export function selectItemRarity(lockedSlotCount: number): Rarity {
 export function createItem(playerLevel: number, rarity: Rarity, template: BaseItemTemplate): Item {
   const itemLevel = Math.max(1, playerLevel + randomInt(-1, 2));
   const mainStatValue = Math.ceil(itemLevel * RARITY_MULTIPLIER[rarity]);
-  const idBase = template.namePrefix.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+  const visualVariants = template.visualVariants || [];
+  const visualVariant = visualVariants.length > 0 ? visualVariants[randomInt(0, visualVariants.length - 1)] : null;
+  const namePrefix = visualVariant?.namePrefix || template.namePrefix;
+  const noun = visualVariant?.noun || namePrefix;
   const iconPool = template.iconPool && template.iconPool.length > 0 ? template.iconPool : [template.icon];
-  const icon = iconPool[randomInt(0, iconPool.length - 1)];
+  const icon = visualVariant?.icon || iconPool[randomInt(0, iconPool.length - 1)];
+  const idBase = namePrefix.toLowerCase().replace(/[^a-z0-9]+/g, '_');
 
   return {
     id: `${idBase}_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-    name: `${RARITY_LABEL[rarity]} ${template.namePrefix}`,
+    name: createGeneratedItemName(rarity, noun),
     slot: template.slot,
     rarity,
     itemLevel,
