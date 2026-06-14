@@ -1,4 +1,4 @@
-import { GameState, EquipmentSlotType, Item } from './types';
+import { GameLogEntry, GameState, EquipmentSlotType, Item } from './types';
 import { addLogEntry, createInitialGameState } from './state';
 import { calculateWinChance } from './combat';
 import { applyXp } from './progression';
@@ -68,9 +68,10 @@ async function addTimedLogEntry(
   state: GameState,
   type: GameState['log'][0]['type'],
   message: string,
-  options?: ActivityTriggerOptions
+  options?: ActivityTriggerOptions,
+  highlights?: GameLogEntry['highlights']
 ): Promise<void> {
-  addLogEntry(state, type, message);
+  addLogEntry(state, type, message, highlights);
   if (!options?.afterLog) {
     return;
   }
@@ -88,7 +89,11 @@ export async function triggerTestLoot(state: GameState, options?: ActivityTrigge
     state,
     result.type === 'equipped' ? 'loot_equipped' : 'loot_missed',
     `${result.message}\nTrigger: ${getTriggerLabel(options)}`,
-    options
+    options,
+    [
+      { text: result.item.name, rarity: result.item.rarity },
+      ...(result.type === 'equipped' && result.replacedItem ? [{ text: result.replacedItem.name, rarity: result.replacedItem.rarity }] : [])
+    ]
   );
 }
 
@@ -139,6 +144,10 @@ export async function triggerEncounter(state: GameState, options?: ActivityTrigg
     state,
     lootResult.type === 'equipped' ? 'loot_equipped' : 'loot_missed',
     `${lootResult.message}\nTrigger: ${getTriggerLabel(options)}`,
-    options
+    options,
+    [
+      { text: lootResult.item.name, rarity: lootResult.item.rarity },
+      ...(lootResult.type === 'equipped' && lootResult.replacedItem ? [{ text: lootResult.replacedItem.name, rarity: lootResult.replacedItem.rarity }] : [])
+    ]
   );
 }

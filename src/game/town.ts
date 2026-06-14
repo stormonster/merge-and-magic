@@ -96,7 +96,7 @@ export function processTownPurchase(state: GameState): TownPurchaseResult {
   const targetSlot = state.player.equipment[item.slot];
 
   if (targetSlot.locked) {
-    addLogEntry(state, 'loot_missed', `🛒 Skipped locked slot: ${item.name}.`);
+    addLogEntry(state, 'loot_missed', `🛒 Skipped locked slot: ${item.name}.`, [{ text: item.name, rarity: item.rarity }]);
     return { type: 'skipped_locked' };
   }
 
@@ -108,7 +108,7 @@ export function processTownPurchase(state: GameState): TownPurchaseResult {
   const result = handleLootDrop(state.player, item);
 
   if (result.type === 'missed') {
-    addLogEntry(state, 'loot_missed', `🛒 Skipped locked slot: ${item.name}.`);
+    addLogEntry(state, 'loot_missed', `🛒 Skipped locked slot: ${item.name}.`, [{ text: item.name, rarity: item.rarity }]);
     return { type: 'skipped_locked' };
   }
 
@@ -119,7 +119,11 @@ export function processTownPurchase(state: GameState): TownPurchaseResult {
     'loot_equipped',
     result.replacedItem
       ? `🛒 Bought ${item.name} for ${cost} gold. Replaced: ${result.replacedItem.name}.`
-      : `🛒 Bought ${item.name} for ${cost} gold.`
+      : `🛒 Bought ${item.name} for ${cost} gold.`,
+    [
+      { text: item.name, rarity: item.rarity },
+      ...(result.replacedItem ? [{ text: result.replacedItem.name, rarity: result.replacedItem.rarity }] : [])
+    ]
   );
 
   return { type: 'purchased' };

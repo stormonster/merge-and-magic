@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { GameState, EquipmentSlot, EquipmentSlotType, Rarity } from '../game/types';
+import { GameLogEntry, GameState, EquipmentSlot, EquipmentSlotType, Rarity } from '../game/types';
 import { xpRequiredForNextLevel } from '../game/progression';
 
 const FOCUS_TARGET_MS = 60 * 1000;
@@ -50,6 +50,55 @@ function formatDuration(ms: number): string {
 
 function formatGold(value: number): string {
   return value.toLocaleString('en-US');
+}
+
+function escapeHtml(value: string): string {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function renderHighlightedMessage(entry: GameLogEntry): string {
+  const highlights = entry.highlights || [];
+  if (highlights.length === 0) {
+    return escapeHtml(entry.message);
+  }
+
+  const ranges = highlights
+    .map((highlight) => {
+      const start = entry.message.indexOf(highlight.text);
+      return start >= 0
+        ? {
+            start,
+            end: start + highlight.text.length,
+            highlight
+          }
+        : null;
+    })
+    .filter((range): range is NonNullable<typeof range> => range !== null)
+    .sort((left, right) => left.start - right.start);
+
+  let cursor = 0;
+  let html = '';
+  for (const range of ranges) {
+    if (range.start < cursor) {
+      continue;
+    }
+
+    html += escapeHtml(entry.message.slice(cursor, range.start));
+    html += `<span class="log-item log-rarity-${range.highlight.rarity}">${escapeHtml(entry.message.slice(range.start, range.end))}</span>`;
+    cursor = range.end;
+  }
+
+  html += escapeHtml(entry.message.slice(cursor));
+  return html;
+}
+
+function renderLogEntry(entry: GameLogEntry): string {
+  return `<div class="log-entry log-${entry.type}"><span>${renderHighlightedMessage(entry)}</span></div>`;
 }
 
 function formatItemStats(item: EquipmentSlot['item']): string {
@@ -140,7 +189,7 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
   const serializedState = JSON.stringify(state).replace(/</g, '\\u003c');
 
   const logHtml = state.log.slice(0, 10)
-    .map((entry) => `<div class="log-entry log-${entry.type}"><span>${entry.message}</span></div>`)
+    .map(renderLogEntry)
     .join('');
 
   return `<!DOCTYPE html>
@@ -385,6 +434,46 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
       ].join('');
     }
 
+    function renderHighlightedMessage(entry) {
+      const highlights = entry.highlights || [];
+      if (highlights.length === 0) {
+        return escapeHtml(entry.message);
+      }
+
+      const ranges = highlights
+        .map((highlight) => {
+          const start = entry.message.indexOf(highlight.text);
+          return start >= 0
+            ? {
+                start,
+                end: start + highlight.text.length,
+                highlight
+              }
+            : null;
+        })
+        .filter(Boolean)
+        .sort((left, right) => left.start - right.start);
+
+      let cursor = 0;
+      let html = '';
+      ranges.forEach((range) => {
+        if (range.start < cursor) {
+          return;
+        }
+
+        html += escapeHtml(entry.message.slice(cursor, range.start));
+        html += '<span class="log-item log-rarity-' + escapeHtml(range.highlight.rarity) + '">' + escapeHtml(entry.message.slice(range.start, range.end)) + '</span>';
+        cursor = range.end;
+      });
+
+      html += escapeHtml(entry.message.slice(cursor));
+      return html;
+    }
+
+    function renderLogEntry(entry) {
+      return '<div class="log-entry log-' + escapeHtml(entry.type) + '"><span>' + renderHighlightedMessage(entry) + '</span></div>';
+    }
+
     function bindEquipmentButtons() {
       document.querySelectorAll('.equip-slot').forEach((button) => {
         button.addEventListener('click', () => {
@@ -416,7 +505,7 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
 
     function renderLog(force) {
       const entries = currentState.log.slice(0, 10);
-      const key = JSON.stringify(entries.map((entry) => [entry.id, entry.createdAt, entry.type, entry.message]));
+      const key = JSON.stringify(entries.map((entry) => [entry.id, entry.createdAt, entry.type, entry.message, entry.highlights]));
       if (!force && key === lastLogKey) {
         return;
       }
@@ -427,7 +516,7 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
         return;
       }
       container.innerHTML = entries
-        .map((entry) => '<div class="log-entry log-' + escapeHtml(entry.type) + '"><span>' + escapeHtml(entry.message) + '</span></div>')
+        .map(renderLogEntry)
         .join('');
     }
 

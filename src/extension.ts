@@ -75,7 +75,15 @@ async function debugEquipUniqueLegendary(context: vscode.ExtensionContext) {
   const result = equipDebugItem(currentState, item);
   const replacedText = result.replacedItem ? ` Replaced: ${result.replacedItem.name}.` : '';
 
-  addLogEntry(currentState, 'loot_equipped', `🧪 Debug Unique: Equipped ${result.item.name}.${replacedText}`);
+  addLogEntry(
+    currentState,
+    'loot_equipped',
+    `🧪 Debug Unique: Equipped ${result.item.name}.${replacedText}`,
+    [
+      { text: result.item.name, rarity: result.item.rarity },
+      ...(result.replacedItem ? [{ text: result.replacedItem.name, rarity: result.replacedItem.rarity }] : [])
+    ]
+  );
   await updateState(context);
   panel?.reveal();
 }

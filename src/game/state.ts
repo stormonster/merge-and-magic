@@ -1,4 +1,5 @@
 import { EquipmentSlotType, EquipmentSlot, GameState, PlayerStats } from './types';
+import { GameLogEntry } from './types';
 
 const EQUIPMENT_SLOTS: EquipmentSlotType[] = [
   'helmet',
@@ -66,12 +67,18 @@ export function createInitialGameState(): GameState {
   };
 }
 
-export function addLogEntry(state: GameState, type: GameState['log'][0]['type'], message: string) {
+export function addLogEntry(
+  state: GameState,
+  type: GameState['log'][0]['type'],
+  message: string,
+  highlights?: GameLogEntry['highlights']
+) {
   state.log.unshift({
     id: crypto.randomUUID(),
     createdAt: new Date().toISOString(),
     type,
-    message
+    message,
+    highlights
   });
   state.log = state.log.slice(0, 100);
 }

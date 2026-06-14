@@ -507,6 +507,35 @@ body {
   white-space: pre-line;
 }
 
+.log-entry .log-item {
+  display: inline;
+  font-weight: 800;
+}
+
+.log-rarity-common {
+  color: #a68a72;
+}
+
+.log-rarity-uncommon {
+  color: #5fbf7a;
+}
+
+.log-rarity-rare {
+  color: #5f91d8;
+}
+
+.log-rarity-epic {
+  color: #a66be0;
+}
+
+.log-rarity-legendary {
+  color: #f7c64f;
+}
+
+.log-rarity-mythic {
+  color: #d865a8;
+}
+
 .log-system {
   color: #8b89ff;
 }
