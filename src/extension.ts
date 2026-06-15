@@ -122,32 +122,6 @@ export async function activate(context: vscode.ExtensionContext) {
       markGameViewSeen();
       await vscode.commands.executeCommand('workbench.view.extension.mergeMagicContainer');
     }),
-    vscode.commands.registerCommand('mergeMagic.triggerEncounter', async () => {
-      await processActivityEvent(
-        currentState,
-        {
-          type: 'manual_encounter',
-          source: 'command',
-          label: 'Manual encounter',
-          weight: 1
-        },
-        { afterLog: () => updateState(context) }
-      );
-      await updateState(context);
-    }),
-    vscode.commands.registerCommand('mergeMagic.dropTestLoot', async () => {
-      await processActivityEvent(
-        currentState,
-        {
-          type: 'manual_loot',
-          source: 'command',
-          label: 'Manual loot drop',
-          weight: 1
-        },
-        { afterLog: () => updateState(context) }
-      );
-      await updateState(context);
-    }),
     vscode.commands.registerCommand('mergeMagic.resetSave', async () => {
       currentState = resetGameState();
       await updateState(context);
