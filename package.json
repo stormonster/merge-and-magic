@@ -13,10 +13,6 @@
   "contributes": {
     "commands": [
       {
-        "command": "mergeMagic.openPanel",
-        "title": "Merge & Magic: Open Panel"
-      },
-      {
         "command": "mergeMagic.triggerEncounter",
         "title": "Merge & Magic: Trigger Encounter"
       },
@@ -25,16 +21,8 @@
         "title": "Merge & Magic: Drop Test Loot"
       },
       {
-        "command": "mergeMagic.debugEquipUniqueLegendary",
-        "title": "Merge & Magic: Debug Equip Unique Legendary"
-      },
-      {
         "command": "mergeMagic.resetSave",
         "title": "Merge & Magic: Reset Save"
-      },
-      {
-        "command": "mergeMagic.openSidebar",
-        "title": "Merge & Magic: Open Sidebar"
       }
     ],
     "viewsContainers": {

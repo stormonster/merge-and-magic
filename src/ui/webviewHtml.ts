@@ -131,17 +131,18 @@ function renderTooltip(slot: EquipmentSlot, slotName: string): string {
   `;
 }
 
-function renderSlotButton(slot: EquipmentSlot, iconUri: vscode.Uri) {
+function renderSlotButton(slot: EquipmentSlot, iconUri: vscode.Uri | null) {
   const item = slot.item;
   const rarityClass = item ? getRarityClass(item.rarity) : 'empty-slot';
   const slotName = getSlotLabel(slot.slot);
   const itemName = item ? item.name : 'Empty';
   const tooltip = renderTooltip(slot, slotName);
+  const iconHtml = iconUri ? `<img src="${iconUri.toString()}" alt="${itemName}" />` : '';
 
   return `
     <button class="equip-slot ${rarityClass}" data-slot="${slot.slot}">
       <div class="slot-art">
-        <img src="${iconUri.toString()}" alt="${itemName}" />
+        ${iconHtml}
         <div class="slot-overlay">
           <div class="overlay-meta">
             <span class="lock-state">${slot.locked ? '🔒' : '🔓'}</span>
@@ -171,7 +172,11 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
   ];
 
   const getIconUri = (slot: EquipmentSlot) => {
-    const iconPath = slot.item?.icon || 'placeholder.png';
+    if (!slot.item) {
+      return null;
+    }
+
+    const iconPath = slot.item.icon;
     return webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'assets', ...iconPath.split('/')));
   };
   const equipmentButtons = slots.map((slot) => renderSlotButton(slot, getIconUri(slot)));
@@ -284,6 +289,10 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
     let lastEquipmentKey = '';
     let lastLogKey = '';
 
+    function notifyViewActive() {
+      vscode.postMessage({ type: 'viewActive' });
+    }
+
     function clampPercent(value) {
       return Math.max(0, Math.min(100, Math.round(value)));
     }
@@ -347,11 +356,6 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
 
     function getSlotLabel(slot) {
       return SLOT_LABELS[slot] || slot;
-    }
-
-    function getIconSrc(icon) {
-      const iconPath = icon || 'placeholder.png';
-      return ASSET_BASE_URI + '/' + iconPath.split('/').map(encodeURIComponent).join('/');
     }
 
     function formatItemStats(item) {
@@ -429,11 +433,11 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
       const slotName = getSlotLabel(slot.slot);
       const itemName = item ? item.name : 'Empty';
       const tooltip = renderTooltip(slot, slotName);
-      const iconSrc = getIconSrc(item ? item.icon : null);
+      const iconHtml = item ? '<img src="' + ASSET_BASE_URI + '/' + item.icon.split('/').map(encodeURIComponent).join('/') + '" alt="' + escapeHtml(itemName) + '" />' : '';
       return [
         '<button class="equip-slot ' + rarityClass + '" data-slot="' + escapeHtml(slot.slot) + '">',
         '<div class="slot-art">',
-        '<img src="' + iconSrc + '" alt="' + escapeHtml(itemName) + '" />',
+        iconHtml,
         '<div class="slot-overlay">',
         '<div class="overlay-meta">',
         '<span class="lock-state">' + (slot.locked ? '🔒' : '🔓') + '</span>',
@@ -549,6 +553,13 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
       vscode.postMessage({ type: currentState.town.inTown ? 'leaveTown' : 'enterTown' });
     });
 
+    document.addEventListener('visibilitychange', () => {
+      vscode.postMessage({ type: document.hidden ? 'viewHidden' : 'viewActive' });
+    });
+    window.addEventListener('focus', notifyViewActive);
+    window.addEventListener('pageshow', notifyViewActive);
+    document.addEventListener('pointerdown', notifyViewActive);
+
     window.addEventListener('message', (event) => {
       const message = event.data;
       if (!message || message.type !== 'stateUpdate') {
@@ -559,6 +570,7 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
     });
 
     renderState(true);
+    notifyViewActive();
     setInterval(updateStatus, 1000);
   </script>
 </body>

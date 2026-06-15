@@ -1,28 +1,45 @@
 import * as vscode from 'vscode';
 import { GameState, EquipmentSlotType } from './game/types';
-import { addLogEntry, createInitialGameState, upsertLogEntryByPrefix } from './game/state';
+import { addLogEntry, upsertLogEntryByPrefix } from './game/state';
 import { loadGameState, saveGameState } from './storage/save';
-import { RpgWebviewPanel } from './ui/webviewPanel';
 import { SidebarViewProvider } from './ui/sidebarView';
 import { initializeGitIntegration } from './git/gitIntegration';
 import { processActivityEvent } from './activity/processor';
 import { ActivityEventInput } from './activity/types';
 import { initializeFocusTracker } from './activity/focusTracker';
-import { equipDebugItem, resetGameState, toggleEquipmentSlotLock } from './game/engine';
+import { resetGameState, toggleEquipmentSlotLock } from './game/engine';
 import { applyPassiveHealing } from './game/health';
-import { UNIQUE_ITEM_TEMPLATES } from './data/uniqueItems';
-import { createUniqueLegendaryItem } from './game/loot';
 import { enterTown, leaveTown, processTownPurchase } from './game/town';
 
 let currentState: GameState;
-let panel: RpgWebviewPanel | undefined;
 let sidebarProvider: SidebarViewProvider | undefined;
+let activityStatusItem: vscode.StatusBarItem;
+let unseenActivityUpdates = 0;
+let statusSuppressedUntil = 0;
 const GIT_COOLDOWN_LOG_PREFIX = 'Git activity detected. Encounter cooldown active:';
 
 async function updateState(context: vscode.ExtensionContext) {
   await saveGameState(context, currentState);
-  panel?.postState(currentState);
   sidebarProvider?.refresh(currentState);
+  markActivityUpdate();
+}
+
+function markGameViewSeen() {
+  unseenActivityUpdates = 0;
+  statusSuppressedUntil = Date.now() + 3000;
+  activityStatusItem?.hide();
+}
+
+function markActivityUpdate() {
+  if (!activityStatusItem || Date.now() < statusSuppressedUntil) {
+    return;
+  }
+
+  unseenActivityUpdates += 1;
+  activityStatusItem.text = `$(sparkle) Merge & Magic: ${unseenActivityUpdates} new`;
+  activityStatusItem.tooltip = 'Open Merge & Magic to view recent activity';
+  activityStatusItem.command = 'mergeMagic.openActivityViewInternal';
+  activityStatusItem.show();
 }
 
 function formatDuration(ms: number): string {
@@ -50,44 +67,6 @@ function upsertGitCooldownLog(state: GameState, label: string, remainingMs: numb
   addLogEntry(state, 'system', message);
 }
 
-async function debugEquipUniqueLegendary(context: vscode.ExtensionContext) {
-  currentState = currentState || createInitialGameState();
-  const selection = await vscode.window.showQuickPick(
-    UNIQUE_ITEM_TEMPLATES.map((template) => ({
-      label: template.name,
-      description: template.slot === 'ring1' ? 'ring' : template.slot,
-      detail: Object.entries(template.stats)
-        .map(([stat, value]) => `+${value} ${stat}`)
-        .join(', '),
-      template
-    })),
-    {
-      title: 'Equip Unique Legendary',
-      placeHolder: 'Choose a unique legendary to equip'
-    }
-  );
-
-  if (!selection) {
-    return;
-  }
-
-  const item = createUniqueLegendaryItem(selection.template);
-  const result = equipDebugItem(currentState, item);
-  const replacedText = result.replacedItem ? ` Replaced: ${result.replacedItem.name}.` : '';
-
-  addLogEntry(
-    currentState,
-    'loot_equipped',
-    `🧪 Debug Unique: Equipped ${result.item.name}.${replacedText}`,
-    [
-      { text: result.item.name, rarity: result.item.rarity },
-      ...(result.replacedItem ? [{ text: result.replacedItem.name, rarity: result.replacedItem.rarity }] : [])
-    ]
-  );
-  await updateState(context);
-  panel?.reveal();
-}
-
 async function handleWebviewMessage(message: unknown, context: vscode.ExtensionContext) {
   if (typeof message !== 'object' || message === null) {
     return;
@@ -108,32 +87,6 @@ async function handleWebviewMessage(message: unknown, context: vscode.ExtensionC
         message: `🔐 ${payload.slot} ${currentState.player.equipment[payload.slot].locked ? 'locked' : 'unlocked'}.`
       });
       currentState.log = currentState.log.slice(0, 100);
-      await updateState(context);
-      break;
-    case 'triggerEncounter':
-      await processActivityEvent(
-        currentState,
-        {
-          type: 'manual_encounter',
-          source: 'command',
-          label: 'Manual encounter',
-          weight: 1
-        },
-        { afterLog: () => updateState(context) }
-      );
-      await updateState(context);
-      break;
-    case 'dropTestLoot':
-      await processActivityEvent(
-        currentState,
-        {
-          type: 'manual_loot',
-          source: 'command',
-          label: 'Manual loot drop',
-          weight: 1
-        },
-        { afterLog: () => updateState(context) }
-      );
       await updateState(context);
       break;
     case 'resetSave':
@@ -165,11 +118,11 @@ export async function activate(context: vscode.ExtensionContext) {
   }
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('mergeMagic.openPanel', async () => {
-      panel = RpgWebviewPanel.createOrShow(context.extensionUri, context, currentState, (message) => handleWebviewMessage(message, context));
+    vscode.commands.registerCommand('mergeMagic.openActivityViewInternal', async () => {
+      markGameViewSeen();
+      await vscode.commands.executeCommand('workbench.view.extension.mergeMagicContainer');
     }),
     vscode.commands.registerCommand('mergeMagic.triggerEncounter', async () => {
-      currentState = currentState || createInitialGameState();
       await processActivityEvent(
         currentState,
         {
@@ -181,10 +134,8 @@ export async function activate(context: vscode.ExtensionContext) {
         { afterLog: () => updateState(context) }
       );
       await updateState(context);
-      panel?.reveal();
     }),
     vscode.commands.registerCommand('mergeMagic.dropTestLoot', async () => {
-      currentState = currentState || createInitialGameState();
       await processActivityEvent(
         currentState,
         {
@@ -196,28 +147,22 @@ export async function activate(context: vscode.ExtensionContext) {
         { afterLog: () => updateState(context) }
       );
       await updateState(context);
-      panel?.reveal();
-    }),
-    vscode.commands.registerCommand('mergeMagic.debugEquipUniqueLegendary', async () => {
-      await debugEquipUniqueLegendary(context);
     }),
     vscode.commands.registerCommand('mergeMagic.resetSave', async () => {
       currentState = resetGameState();
       await updateState(context);
-      panel?.reveal();
-    })
-    ,
-    vscode.commands.registerCommand('mergeMagic.openSidebar', async () => {
-      console.log('mergeMagic.openSidebar command invoked');
-      await vscode.commands.executeCommand('workbench.view.extension.mergeMagicContainer');
     })
   );
 
-  // Do not auto-open the full webview panel on activation — user may prefer sidebar only.
-  // The panel will be created when the user runs the `mergeMagic.openPanel` command.
+  activityStatusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
+  context.subscriptions.push(activityStatusItem);
 
-  // Register sidebar provider for the Explorer view
-  sidebarProvider = new SidebarViewProvider(context.extensionUri, currentState, (message) => handleWebviewMessage(message, context));
+  sidebarProvider = new SidebarViewProvider(
+    context.extensionUri,
+    currentState,
+    (message) => handleWebviewMessage(message, context),
+    markGameViewSeen
+  );
   context.subscriptions.push(vscode.window.registerWebviewViewProvider('mergeMagic.sidebarView', sidebarProvider));
 
   initializeGitIntegration(
