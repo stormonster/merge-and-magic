@@ -108,6 +108,7 @@ export type GameState = {
     lastEncounterAt: string | null;
     lastCommitHash: string | null;
     healingStartedAt: string | null;
+    lastTownEnteredAt: string | null;
   };
   town: {
     inTown: boolean;

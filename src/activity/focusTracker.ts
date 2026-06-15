@@ -3,7 +3,7 @@ import { processActivityEvent } from './processor';
 import { GameState } from '../game/types';
 import { isHealing } from '../game/health';
 
-const FOCUS_TARGET_MS = 60 * 1000;
+const FOCUS_TARGET_MS = 5 * 60 * 1000;
 const FOCUS_TICK_MS = 15 * 1000;
 
 type FocusTrackerOptions = {

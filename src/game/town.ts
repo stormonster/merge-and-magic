@@ -23,6 +23,7 @@ const TOWN_PRICE_RANGES: Record<
   rare: { min: 40, max: 85, levelMin: 8, levelMax: 12 },
 };
 const TOWN_HEAL_PER_TICK = 2;
+export const TOWN_ENTRY_COOLDOWN_MS = 5 * 60 * 1000;
 
 export type TownPurchaseResult =
   | {
@@ -38,7 +39,25 @@ export type TownPurchaseResult =
       type: "not_in_town";
     };
 
-export type EnterTownResult = "entered" | "already_in_town" | "healing";
+export type EnterTownResult =
+  | "entered"
+  | "already_in_town"
+  | "healing"
+  | "cooldown";
+
+export function getTownEntryCooldownRemainingMs(
+  state: GameState,
+  now = Date.now(),
+): number {
+  const lastTownEnteredAt = state.cooldowns.lastTownEnteredAt
+    ? Date.parse(state.cooldowns.lastTownEnteredAt)
+    : 0;
+  if (!lastTownEnteredAt) {
+    return 0;
+  }
+
+  return Math.max(0, TOWN_ENTRY_COOLDOWN_MS - (now - lastTownEnteredAt));
+}
 
 export function enterTown(state: GameState): EnterTownResult {
   if (state.town.inTown) {
@@ -54,9 +73,17 @@ export function enterTown(state: GameState): EnterTownResult {
     return "healing";
   }
 
+  const cooldownRemainingMs = getTownEntryCooldownRemainingMs(state);
+  if (cooldownRemainingMs > 0) {
+    addLogEntry(state, "system", "🏘 Town is still restocking. Try again soon.");
+    return "cooldown";
+  }
+
+  const enteredAt = new Date().toISOString();
+  state.cooldowns.lastTownEnteredAt = enteredAt;
   state.town = {
     inTown: true,
-    enteredAt: new Date().toISOString(),
+    enteredAt,
     purchases: 0,
   };
   addLogEntry(

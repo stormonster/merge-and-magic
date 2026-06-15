@@ -2,8 +2,9 @@ import * as vscode from 'vscode';
 import { GameLogEntry, GameState, EquipmentSlot, EquipmentSlotType, Rarity } from '../game/types';
 import { xpRequiredForNextLevel } from '../game/progression';
 
-const FOCUS_TARGET_MS = 60 * 1000;
+const FOCUS_TARGET_MS = 5 * 60 * 1000;
 const COMMIT_ENCOUNTER_COOLDOWN_MS = 5 * 60 * 1000;
+const TOWN_ENTRY_COOLDOWN_MS = 5 * 60 * 1000;
 
 const slotLabels: Record<EquipmentSlotType, string> = {
   helmet: 'Helmet',
@@ -180,12 +181,15 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
   const xpPercent = clampPercent((state.player.xp / xpRequired) * 100);
   const hpPercent = clampPercent((state.player.hp / state.player.maxHp) * 100);
   const focusPercent = clampPercent((state.focus.activeMs / FOCUS_TARGET_MS) * 100);
-  const focusSeconds = Math.min(Math.floor(state.focus.activeMs / 1000), Math.floor(FOCUS_TARGET_MS / 1000));
+  const focusMs = Math.min(state.focus.activeMs, FOCUS_TARGET_MS);
   const lastEncounterAt = state.cooldowns.lastEncounterAt ? Date.parse(state.cooldowns.lastEncounterAt) : 0;
   const commitCooldownMs = Math.max(0, COMMIT_ENCOUNTER_COOLDOWN_MS - (Date.now() - lastEncounterAt));
   const commitCooldownLabel = commitCooldownMs > 0 ? formatDuration(commitCooldownMs) : 'Ready';
-  const townButtonLabel = state.town.inTown ? 'Leave town' : 'Go to town';
-  const townStatusLabel = state.town.inTown ? `Shopping · ${state.town.purchases} bought · HP ${state.player.hp}/${state.player.maxHp}` : 'Adventure';
+  const lastTownEnteredAt = state.cooldowns.lastTownEnteredAt ? Date.parse(state.cooldowns.lastTownEnteredAt) : 0;
+  const townCooldownMs = state.town.inTown ? 0 : Math.max(0, TOWN_ENTRY_COOLDOWN_MS - (Date.now() - lastTownEnteredAt));
+  const townButtonLabel = state.town.inTown ? 'Leave town' : townCooldownMs > 0 ? `Town ${formatDuration(townCooldownMs)}` : 'Go to town';
+  const townStatusLabel = state.town.inTown ? `Shopping · ${state.town.purchases} bought · HP ${state.player.hp}/${state.player.maxHp}` : townCooldownMs > 0 ? 'Restocking' : 'Adventure';
+  const townButtonDisabled = !state.town.inTown && townCooldownMs > 0;
   const serializedState = JSON.stringify(state).replace(/</g, '\\u003c');
 
   const logHtml = state.log.slice(0, 10)
@@ -243,7 +247,7 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
       </div>
       <div class="status-row">
         <div class="status-label">Focus</div>
-        <div class="status-value" data-status="focus">${focusSeconds}/60s</div>
+        <div class="status-value" data-status="focus">${formatDuration(focusMs)}/${formatDuration(FOCUS_TARGET_MS)}</div>
         <div class="status-bar"><div class="status-fill focus-fill" data-status-fill="focus" style="width: ${focusPercent}%"></div></div>
       </div>
       <div class="status-row compact-status">
@@ -253,7 +257,7 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
     </section>
 
     <section class="town-panel">
-      <button class="town-button" data-action="town-toggle">${townButtonLabel}</button>
+      <button class="town-button" data-action="town-toggle"${townButtonDisabled ? ' disabled' : ''}>${townButtonLabel}</button>
       <div class="town-status" data-town-status>${townStatusLabel}</div>
     </section>
 
@@ -271,6 +275,7 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
     const vscode = acquireVsCodeApi();
     const FOCUS_TARGET_MS = ${FOCUS_TARGET_MS};
     const COMMIT_ENCOUNTER_COOLDOWN_MS = ${COMMIT_ENCOUNTER_COOLDOWN_MS};
+    const TOWN_ENTRY_COOLDOWN_MS = ${TOWN_ENTRY_COOLDOWN_MS};
     const ASSET_BASE_URI = '${assetBaseUri.toString()}';
     const SLOT_ORDER = ['amulet', 'helmet', 'gloves', 'weapon', 'chest', 'offhand', 'ring1', 'boots', 'ring2'];
     const SLOT_LABELS = ${JSON.stringify(slotLabels)};
@@ -397,19 +402,25 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
     function updateStatus() {
       const state = currentState;
       const xpRequired = xpRequiredForNextLevel(state.player.level);
-      const focusSeconds = Math.min(Math.floor(state.focus.activeMs / 1000), Math.floor(FOCUS_TARGET_MS / 1000));
+      const focusMs = Math.min(state.focus.activeMs, FOCUS_TARGET_MS);
       const lastEncounterAt = state.cooldowns.lastEncounterAt ? Date.parse(state.cooldowns.lastEncounterAt) : 0;
       const commitCooldownMs = Math.max(0, COMMIT_ENCOUNTER_COOLDOWN_MS - (Date.now() - lastEncounterAt));
+      const lastTownEnteredAt = state.cooldowns.lastTownEnteredAt ? Date.parse(state.cooldowns.lastTownEnteredAt) : 0;
+      const townCooldownMs = state.town.inTown ? 0 : Math.max(0, TOWN_ENTRY_COOLDOWN_MS - (Date.now() - lastTownEnteredAt));
+      const townButton = document.querySelector('[data-action="town-toggle"]');
 
       setText('[data-status="hp"]', state.player.hp + '/' + state.player.maxHp);
       setWidth('[data-status-fill="hp"]', (state.player.hp / state.player.maxHp) * 100);
       setText('[data-status="xp"]', state.player.xp + '/' + xpRequired);
       setWidth('[data-status-fill="xp"]', (state.player.xp / xpRequired) * 100);
-      setText('[data-status="focus"]', focusSeconds + '/60s');
+      setText('[data-status="focus"]', formatDuration(focusMs) + '/' + formatDuration(FOCUS_TARGET_MS));
       setWidth('[data-status-fill="focus"]', (state.focus.activeMs / FOCUS_TARGET_MS) * 100);
       setText('[data-status="commit"]', commitCooldownMs > 0 ? formatDuration(commitCooldownMs) : 'Ready');
-      setText('[data-town-status]', state.town.inTown ? 'Shopping · ' + state.town.purchases + ' bought · HP ' + state.player.hp + '/' + state.player.maxHp : 'Adventure');
-      setText('[data-action="town-toggle"]', state.town.inTown ? 'Leave town' : 'Go to town');
+      setText('[data-town-status]', state.town.inTown ? 'Shopping · ' + state.town.purchases + ' bought · HP ' + state.player.hp + '/' + state.player.maxHp : townCooldownMs > 0 ? 'Restocking' : 'Adventure');
+      setText('[data-action="town-toggle"]', state.town.inTown ? 'Leave town' : townCooldownMs > 0 ? 'Town ' + formatDuration(townCooldownMs) : 'Go to town');
+      if (townButton) {
+        townButton.disabled = !state.town.inTown && townCooldownMs > 0;
+      }
     }
 
     function renderSlotButton(slot) {
@@ -528,6 +539,13 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
     }
 
     document.querySelector('[data-action="town-toggle"]')?.addEventListener('click', () => {
+      if (!currentState.town.inTown) {
+        const lastTownEnteredAt = currentState.cooldowns.lastTownEnteredAt ? Date.parse(currentState.cooldowns.lastTownEnteredAt) : 0;
+        const townCooldownMs = Math.max(0, TOWN_ENTRY_COOLDOWN_MS - (Date.now() - lastTownEnteredAt));
+        if (townCooldownMs > 0) {
+          return;
+        }
+      }
       vscode.postMessage({ type: currentState.town.inTown ? 'leaveTown' : 'enterTown' });
     });
 

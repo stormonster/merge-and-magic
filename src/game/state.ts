@@ -57,7 +57,8 @@ export function createInitialGameState(): GameState {
     cooldowns: {
       lastEncounterAt: null,
       lastCommitHash: null,
-      healingStartedAt: null
+      healingStartedAt: null,
+      lastTownEnteredAt: null
     },
     town: {
       inTown: false,

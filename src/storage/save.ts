@@ -31,7 +31,8 @@ export async function loadGameState(context: vscode.ExtensionContext): Promise<G
     },
     cooldowns: {
       ...saved.cooldowns,
-      healingStartedAt: saved.cooldowns.healingStartedAt || null
+      healingStartedAt: saved.cooldowns.healingStartedAt || null,
+      lastTownEnteredAt: saved.cooldowns.lastTownEnteredAt || null
     },
     town: saved.town || {
       inTown: false,
