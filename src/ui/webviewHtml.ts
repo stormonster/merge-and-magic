@@ -158,6 +158,7 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
   const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'styles', 'webview.css'));
   const assetBaseUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'assets'));
   const logoUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'assets', 'placeholder.png'));
+  const backgroundUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'assets', 'panel-background.png'));
 
   const slots = [
     state.player.equipment.amulet,
@@ -209,7 +210,7 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
   <link href="${styleUri}" rel="stylesheet" />
   <title>Merge & Magic</title>
 </head>
-<body>
+<body style="--panel-background-image: url('${backgroundUri.toString()}')">
   <div class="page">
     <section class="top-panel">
       <div class="brand-block">
