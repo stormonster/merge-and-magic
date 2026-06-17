@@ -49,6 +49,10 @@ function formatDuration(ms: number): string {
   return `${minutes}m ${seconds}s`;
 }
 
+function formatMinuteTarget(ms: number): string {
+  return `${Math.max(1, Math.round(ms / 60000))}m`;
+}
+
 function formatGold(value: number): string {
   return value.toLocaleString('en-US');
 }
@@ -188,6 +192,7 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
   const hpPercent = clampPercent((state.player.hp / state.player.maxHp) * 100);
   const focusPercent = clampPercent((state.focus.activeMs / FOCUS_TARGET_MS) * 100);
   const focusMs = Math.min(state.focus.activeMs, FOCUS_TARGET_MS);
+  const focusTargetLabel = formatMinuteTarget(FOCUS_TARGET_MS);
   const lastEncounterAt = state.cooldowns.lastEncounterAt ? Date.parse(state.cooldowns.lastEncounterAt) : 0;
   const commitCooldownMs = Math.max(0, COMMIT_ENCOUNTER_COOLDOWN_MS - (Date.now() - lastEncounterAt));
   const commitCooldownLabel = commitCooldownMs > 0 ? formatDuration(commitCooldownMs) : 'Ready';
@@ -253,7 +258,7 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
       </div>
       <div class="status-row">
         <div class="status-label">Focus</div>
-        <div class="status-value" data-status="focus">${formatDuration(focusMs)}/${formatDuration(FOCUS_TARGET_MS)}</div>
+        <div class="status-value" data-status="focus">${formatDuration(focusMs)}/${focusTargetLabel}</div>
         <div class="status-bar"><div class="status-fill focus-fill" data-status-fill="focus" style="width: ${focusPercent}%"></div></div>
       </div>
       <div class="status-row compact-status">
@@ -306,6 +311,10 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
         return seconds + 's';
       }
       return minutes + 'm ' + seconds + 's';
+    }
+
+    function formatMinuteTarget(ms) {
+      return Math.max(1, Math.round(ms / 60000)) + 'm';
     }
 
     function formatGold(value) {
@@ -408,6 +417,7 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
       const state = currentState;
       const xpRequired = xpRequiredForNextLevel(state.player.level);
       const focusMs = Math.min(state.focus.activeMs, FOCUS_TARGET_MS);
+      const focusTargetLabel = formatMinuteTarget(FOCUS_TARGET_MS);
       const lastEncounterAt = state.cooldowns.lastEncounterAt ? Date.parse(state.cooldowns.lastEncounterAt) : 0;
       const commitCooldownMs = Math.max(0, COMMIT_ENCOUNTER_COOLDOWN_MS - (Date.now() - lastEncounterAt));
       const lastTownEnteredAt = state.cooldowns.lastTownEnteredAt ? Date.parse(state.cooldowns.lastTownEnteredAt) : 0;
@@ -418,7 +428,7 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
       setWidth('[data-status-fill="hp"]', (state.player.hp / state.player.maxHp) * 100);
       setText('[data-status="xp"]', state.player.xp + '/' + xpRequired);
       setWidth('[data-status-fill="xp"]', (state.player.xp / xpRequired) * 100);
-      setText('[data-status="focus"]', formatDuration(focusMs) + '/' + formatDuration(FOCUS_TARGET_MS));
+      setText('[data-status="focus"]', formatDuration(focusMs) + '/' + focusTargetLabel);
       setWidth('[data-status-fill="focus"]', (state.focus.activeMs / FOCUS_TARGET_MS) * 100);
       setText('[data-status="commit"]', commitCooldownMs > 0 ? formatDuration(commitCooldownMs) : 'Ready');
       setText('[data-town-status]', state.town.inTown ? 'Shopping · ' + state.town.purchases + ' bought · HP ' + state.player.hp + '/' + state.player.maxHp : townCooldownMs > 0 ? 'Restocking' : 'Adventure');
