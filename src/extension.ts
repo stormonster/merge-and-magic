@@ -16,7 +16,7 @@ let sidebarProvider: SidebarViewProvider | undefined;
 let activityStatusItem: vscode.StatusBarItem;
 let unseenActivityUpdates = 0;
 let statusSuppressedUntil = 0;
-const GIT_COOLDOWN_LOG_PREFIX = 'Git activity detected. Encounter cooldown active:';
+const GIT_COOLDOWN_LOG_PREFIX = 'Git activity detected.\nEncounter cooldown active:';
 
 async function updateState(context: vscode.ExtensionContext) {
   await saveGameState(context, currentState);
@@ -53,7 +53,7 @@ function formatDuration(ms: number): string {
 }
 
 function upsertGitCooldownLog(state: GameState, label: string, remainingMs: number) {
-  const message = `${GIT_COOLDOWN_LOG_PREFIX} ${formatDuration(remainingMs)} remaining. Last trigger: ${label}.`;
+  const message = `${GIT_COOLDOWN_LOG_PREFIX} ${formatDuration(remainingMs)} remaining.\nLast trigger: ${label}.`;
   const existingIndex = state.log.findIndex((entry) => entry.message.startsWith(GIT_COOLDOWN_LOG_PREFIX));
   const existing = state.log[existingIndex];
   if (existing) {
