@@ -1,8 +1,28 @@
 # Merge & Magic
 
-Merge & Magic turns everyday coding activity into a small idle RPG inside VS Code. Work in your editor, let encounters happen, collect gear, lock the pieces you want to keep, and watch your developer-adventurer slowly become less embarrassing in combat.
+Merge & Magic turns everyday coding activity into a small idle RPG inside VS Code.
+
+Work in your editor, let encounters happen, collect gear, lock the pieces you want to keep, and watch your developer-adventurer slowly become less embarrassing in combat.
 
 It is intentionally lightweight: no build dashboards, no productivity scoring, no guilt machine. Just a tiny RPG loop living beside your code.
+
+![Merge & Magic Hero](assets/marketplace/hero.png)
+
+## How it works
+
+![Gameplay Loop](assets/marketplace/loop.png)
+
+## Activity Log
+
+![Activity Log](assets/marketplace/log.png)
+
+## Risk vs Reward
+
+![Greed Bonus](assets/marketplace/risk.png)
+
+## Start Your Adventure
+
+![Call to Action](assets/marketplace/cta.png)
 
 ## Features
 
