@@ -188,6 +188,10 @@ body {
     inset 0 -8px 14px rgba(24, 12, 6, 0.16);
 }
 
+.suffix-select {
+  cursor: pointer;
+}
+
 .name-input:focus {
   outline: none;
   border-color: #a06a35;
@@ -218,6 +222,13 @@ body {
 .onboarding-submit:hover {
   border-color: #d99a3a;
   color: #ffe0a3;
+}
+
+.settings-save:disabled,
+.onboarding-submit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: saturate(0.65);
 }
 
 .settings-cancel {

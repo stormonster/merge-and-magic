@@ -17,9 +17,36 @@ let activityStatusItem: vscode.StatusBarItem;
 let unseenActivityUpdates = 0;
 let statusSuppressedUntil = 0;
 const GIT_COOLDOWN_LOG_PREFIX = 'Git activity detected.\nEncounter cooldown active:';
+const PLAYER_SUFFIXES = new Set([
+  'the Honorable',
+  'the Bold',
+  'the Wanderer',
+  'the Unbroken',
+  'the Lucky',
+  'the Reckless',
+  'the Relentless',
+  'the Arcane',
+  'the Unhinged',
+  'the Caffeinated',
+  'the Debugger',
+  'the Uncommitted',
+  'the Stalwart',
+  'the Wayfarer',
+  'the Watchful',
+  'the Untamed',
+  'the Resolute',
+  'the Nomad',
+  'the Keen',
+  'the Persistent'
+]);
 
 function sanitizePlayerName(value: string): string {
   return value.trim().replace(/\s+/g, ' ').slice(0, 24);
+}
+
+function sanitizePlayerSuffix(value: string): string {
+  const suffix = value.trim();
+  return PLAYER_SUFFIXES.has(suffix) ? suffix : '';
 }
 
 async function updateState(context: vscode.ExtensionContext) {
@@ -76,7 +103,7 @@ async function handleWebviewMessage(message: unknown, context: vscode.ExtensionC
     return;
   }
 
-  const payload = message as { type?: string; slot?: EquipmentSlotType; name?: string };
+  const payload = message as { type?: string; slot?: EquipmentSlotType; name?: string; suffix?: string };
 
   switch (payload.type) {
     case 'toggleSlotLock':
@@ -97,13 +124,16 @@ async function handleWebviewMessage(message: unknown, context: vscode.ExtensionC
       currentState = resetGameState();
       await updateState(context);
       break;
+    case 'saveSettings':
     case 'setPlayerName': {
       const nextName = sanitizePlayerName(payload.name || '');
+      const nextSuffix = sanitizePlayerSuffix(payload.suffix || currentState.player.suffix || '');
       if (!nextName) {
         return;
       }
 
       currentState.player.name = nextName;
+      currentState.player.suffix = nextSuffix;
       await updateState(context);
       break;
     }

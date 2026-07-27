@@ -5,6 +5,28 @@ import { xpRequiredForNextLevel } from '../game/progression';
 const FOCUS_TARGET_MS = 5 * 60 * 1000;
 const COMMIT_ENCOUNTER_COOLDOWN_MS = 5 * 60 * 1000;
 const TOWN_ENTRY_COOLDOWN_MS = 5 * 60 * 1000;
+const SUFFIX_OPTIONS = [
+  'the Honorable',
+  'the Bold',
+  'the Wanderer',
+  'the Unbroken',
+  'the Lucky',
+  'the Reckless',
+  'the Relentless',
+  'the Arcane',
+  'the Unhinged',
+  'the Caffeinated',
+  'the Debugger',
+  'the Uncommitted',
+  'the Stalwart',
+  'the Wayfarer',
+  'the Watchful',
+  'the Untamed',
+  'the Resolute',
+  'the Nomad',
+  'the Keen',
+  'the Persistent'
+];
 
 const slotLabels: Record<EquipmentSlotType, string> = {
   helmet: 'Helmet',
@@ -24,6 +46,20 @@ function getRarityClass(rarity: Rarity): string {
 
 function getSlotLabel(slot: EquipmentSlotType) {
   return slotLabels[slot] || slot.replace(/([A-Z])/g, ' $1').replace(/\b\w/g, (match) => match.toUpperCase());
+}
+
+function formatHeroDisplayName(name: string, suffix: string): string {
+  return [name.trim(), suffix.trim()].filter(Boolean).join(' ');
+}
+
+function renderSuffixOptions(selectedSuffix: string): string {
+  return [
+    '<option value="">Choose a suffix</option>',
+    ...SUFFIX_OPTIONS.map((suffix) => {
+      const selected = suffix === selectedSuffix ? ' selected' : '';
+      return `<option value="${escapeHtml(suffix)}"${selected}>${escapeHtml(suffix)}</option>`;
+    })
+  ].join('');
 }
 
 function computePowerScore(state: GameState) {
@@ -165,7 +201,10 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
   const settingsIconUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'assets', 'settings-icon.png'));
   const backgroundUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'assets', 'panel-background.png'));
   const heroName = state.player.name.trim();
-  const hasHeroName = heroName.length > 0;
+  const heroSuffix = state.player.suffix.trim();
+  const hasHeroIdentity = heroName.length > 0 && heroSuffix.length > 0;
+  const heroDisplayName = hasHeroIdentity ? formatHeroDisplayName(heroName, heroSuffix) : 'Unnamed Adventurer';
+  const nameFormReady = heroName.length > 0 && heroSuffix.length > 0;
 
   const slots = [
     state.player.equipment.amulet,
@@ -218,8 +257,8 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
   <link href="${styleUri}" rel="stylesheet" />
   <title>Merge & Magic</title>
 </head>
-<body class="${hasHeroName ? 'has-hero-name' : 'needs-hero-name'}" style="--panel-background-image: url('${backgroundUri.toString()}')">
-  <button class="settings-fab" type="button" data-action="open-settings" aria-label="Open settings"${hasHeroName ? '' : ' hidden'}>
+<body class="${hasHeroIdentity ? 'has-hero-name' : 'needs-hero-name'}" style="--panel-background-image: url('${backgroundUri.toString()}')">
+  <button class="settings-fab" type="button" data-action="open-settings" aria-label="Open settings"${hasHeroIdentity ? '' : ' hidden'}>
     <img src="${settingsIconUri.toString()}" alt="" aria-hidden="true" />
   </button>
 
@@ -232,14 +271,18 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
     <form class="settings-form" data-form="name" autocomplete="off">
       <label class="field-label" for="settings-player-name">Hero name</label>
       <textarea class="name-input" id="settings-player-name" data-player-name-input rows="1" wrap="off" maxlength="24" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">${escapeHtml(heroName)}</textarea>
+      <label class="field-label" for="settings-player-suffix">Hero suffix</label>
+      <select class="name-input suffix-select" id="settings-player-suffix" data-player-suffix-select autocomplete="off">
+        ${renderSuffixOptions(heroSuffix)}
+      </select>
       <div class="settings-actions">
         <button class="settings-cancel" type="button" data-action="close-settings">Cancel</button>
-        <button class="settings-save" type="submit">Save</button>
+        <button class="settings-save" type="submit"${nameFormReady ? '' : ' disabled'}>Save</button>
       </div>
     </form>
   </aside>
 
-  <section class="onboarding-screen"${hasHeroName ? ' hidden' : ''} data-onboarding-screen>
+  <section class="onboarding-screen"${hasHeroIdentity ? ' hidden' : ''} data-onboarding-screen>
     <div class="onboarding-panel">
       <div class="onboarding-mark">
         <div class="brand-logo onboarding-logo" style="background-image: url('${logoUri.toString()}')"></div>
@@ -247,12 +290,16 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
       <div class="onboarding-copy">
         <div class="onboarding-kicker">Merge & Magic</div>
         <h1 class="onboarding-title">Name your hero</h1>
-        <p class="onboarding-text">Give your adventurer a name before the journey begins.</p>
+        <p class="onboarding-text">Choose a name and suffix before the journey begins.</p>
       </div>
       <form class="onboarding-form" data-form="name" autocomplete="off">
         <label class="field-label" for="onboarding-player-name">Hero name</label>
         <textarea class="name-input" id="onboarding-player-name" data-player-name-input rows="1" wrap="off" maxlength="24" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">${escapeHtml(heroName)}</textarea>
-        <button class="onboarding-submit" type="submit">Begin adventure</button>
+        <label class="field-label" for="onboarding-player-suffix">Hero suffix</label>
+        <select class="name-input suffix-select" id="onboarding-player-suffix" data-player-suffix-select autocomplete="off">
+          ${renderSuffixOptions(heroSuffix)}
+        </select>
+        <button class="onboarding-submit" type="submit" disabled>Begin adventure</button>
       </form>
     </div>
   </section>
@@ -268,7 +315,7 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
       </div>
       <div class="hero-banner">
         <div class="hero-label">Hero</div>
-        <div class="hero-value" data-hero-name>${hasHeroName ? escapeHtml(heroName) : 'Unnamed Adventurer'}</div>
+        <div class="hero-value" data-hero-name>${escapeHtml(heroDisplayName)}</div>
       </div>
       <div class="stats-grid">
         <div class="stat-pill">
@@ -398,41 +445,74 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
       return (currentState.player.name || '').trim();
     }
 
+    function getHeroSuffix() {
+      return (currentState.player.suffix || '').trim();
+    }
+
+    function getHeroDisplayName() {
+      const heroName = getHeroName();
+      const heroSuffix = getHeroSuffix();
+      return heroName && heroSuffix ? heroName + ' ' + heroSuffix : 'Unnamed Adventurer';
+    }
+
     function normalizeHeroName(value) {
       return String(value || '').trim().replace(/\\s+/g, ' ').slice(0, 24);
     }
 
-    function syncPlayerNameInputs(value) {
+    function syncSettingsInputs(name, suffix) {
       document.querySelectorAll('[data-player-name-input]').forEach((field) => {
         if (field instanceof HTMLTextAreaElement) {
-          field.value = value;
+          field.value = name;
         }
+      });
+
+      document.querySelectorAll('[data-player-suffix-select]').forEach((field) => {
+        if (field instanceof HTMLSelectElement) {
+          field.value = suffix;
+        }
+      });
+    }
+
+    function updateNameFormButtons() {
+      document.querySelectorAll('form[data-form="name"]').forEach((form) => {
+        const nameInput = form.querySelector('[data-player-name-input]');
+        const suffixInput = form.querySelector('[data-player-suffix-select]');
+        const submitButton = form.querySelector('button[type="submit"]');
+
+        if (!submitButton) {
+          return;
+        }
+
+        const hasName = nameInput instanceof HTMLTextAreaElement ? normalizeHeroName(nameInput.value).length > 0 : false;
+        const hasSuffix = suffixInput instanceof HTMLSelectElement ? String(suffixInput.value || '').trim().length > 0 : false;
+        submitButton.disabled = !(hasName && hasSuffix);
       });
     }
 
     function updateIdentity(force) {
       const heroName = getHeroName();
-      const hasHeroName = heroName.length > 0;
-      const title = hasHeroName ? heroName : 'Unnamed Adventurer';
+      const heroSuffix = getHeroSuffix();
+      const hasHeroIdentity = heroName.length > 0 && heroSuffix.length > 0;
+      const title = getHeroDisplayName();
       const onboarding = document.querySelector('[data-onboarding-screen]');
       const settingsButton = document.querySelector('[data-action="open-settings"]');
       const settingsDrawer = document.querySelector('.settings-drawer');
       const settingsBackdrop = document.querySelector('.settings-backdrop');
 
-      document.body.classList.toggle('needs-hero-name', !hasHeroName);
-      document.body.classList.toggle('has-hero-name', hasHeroName);
+      document.body.classList.toggle('needs-hero-name', !hasHeroIdentity);
+      document.body.classList.toggle('has-hero-name', hasHeroIdentity);
       document.body.classList.toggle('settings-open', settingsOpen);
 
       setText('[data-hero-name]', title);
 
       if (onboarding) {
-        onboarding.hidden = hasHeroName;
-        onboarding.style.display = hasHeroName ? 'none' : 'grid';
+        onboarding.hidden = hasHeroIdentity;
+        onboarding.style.display = hasHeroIdentity ? 'none' : 'grid';
       }
 
       if (settingsButton) {
-        settingsButton.hidden = !hasHeroName;
-        settingsButton.style.display = hasHeroName ? 'inline-flex' : 'none';
+        settingsButton.hidden = !hasHeroIdentity;
+        settingsButton.style.display = hasHeroIdentity ? 'inline-flex' : 'none';
       }
 
       if (settingsDrawer) {
@@ -445,6 +525,8 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
         settingsBackdrop.hidden = !settingsOpen;
         settingsBackdrop.style.display = settingsOpen ? 'block' : 'none';
       }
+
+      updateNameFormButtons();
     }
 
     function computePowerScore(state) {
@@ -656,9 +738,10 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
     function setSettingsOpen(open) {
       settingsOpen = open;
       if (open) {
-        syncPlayerNameInputs(getHeroName());
+        syncSettingsInputs(getHeroName(), getHeroSuffix());
       }
       updateIdentity(false);
+      updateNameFormButtons();
     }
 
     document.querySelector('[data-action="open-settings"]')?.addEventListener('click', () => {
@@ -667,59 +750,76 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
 
     document.querySelectorAll('[data-action="close-settings"]').forEach((button) => {
       button.addEventListener('click', () => {
-        syncPlayerNameInputs(getHeroName());
+        syncSettingsInputs(getHeroName(), getHeroSuffix());
         setSettingsOpen(false);
       });
     });
 
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape' && settingsOpen) {
-        syncPlayerNameInputs(getHeroName());
+        syncSettingsInputs(getHeroName(), getHeroSuffix());
         setSettingsOpen(false);
       }
     });
 
-    function savePlayerName(input) {
-      const nextName = normalizeHeroName(input.value);
+    function saveSettings(form) {
+      const nameInput = form.querySelector('[data-player-name-input]');
+      const suffixInput = form.querySelector('[data-player-suffix-select]');
+      const nextName = nameInput instanceof HTMLTextAreaElement ? normalizeHeroName(nameInput.value) : '';
+      const nextSuffix = suffixInput instanceof HTMLSelectElement ? String(suffixInput.value || '').trim() : '';
+
       if (!nextName) {
-        input.focus();
+        if (nameInput instanceof HTMLTextAreaElement) {
+          nameInput.focus();
+        }
         return;
       }
 
-      syncPlayerNameInputs(nextName);
+      if (!nextSuffix) {
+        if (suffixInput instanceof HTMLSelectElement) {
+          suffixInput.focus();
+        }
+        return;
+      }
+
+      syncSettingsInputs(nextName, nextSuffix);
       currentState.player.name = nextName;
+      currentState.player.suffix = nextSuffix;
       renderState(true);
-      vscode.postMessage({ type: 'setPlayerName', name: nextName });
+      vscode.postMessage({ type: 'saveSettings', name: nextName, suffix: nextSuffix });
       setSettingsOpen(false);
     }
 
     document.querySelectorAll('form[data-form="name"]').forEach((form) => {
       form.addEventListener('submit', (event) => {
         event.preventDefault();
-        const input = form.querySelector('[data-player-name-input]');
-        if (input instanceof HTMLTextAreaElement) {
-          savePlayerName(input);
-        }
+        saveSettings(form);
       });
     });
 
-    document.querySelectorAll('[data-player-name-input]').forEach((input) => {
-      if (!(input instanceof HTMLTextAreaElement)) {
+    document.querySelectorAll('[data-player-name-input], [data-player-suffix-select]').forEach((input) => {
+      if (input instanceof HTMLTextAreaElement) {
+        input.addEventListener('input', updateNameFormButtons);
+        input.addEventListener('keydown', (event) => {
+          if (event.key !== 'Enter' || event.shiftKey) {
+            return;
+          }
+
+          event.preventDefault();
+          const form = input.closest('form[data-form="name"]');
+          if (form) {
+            form.requestSubmit();
+          }
+        });
         return;
       }
 
-      input.addEventListener('keydown', (event) => {
-        if (event.key !== 'Enter' || event.shiftKey) {
-          return;
-        }
-
-        event.preventDefault();
-        const form = input.closest('form[data-form="name"]');
-        if (form) {
-          form.requestSubmit();
-        }
-      });
+      if (input instanceof HTMLSelectElement) {
+        input.addEventListener('change', updateNameFormButtons);
+      }
     });
+
+    updateNameFormButtons();
 
     document.querySelector('[data-action="town-toggle"]')?.addEventListener('click', () => {
       if (!currentState.town.inTown) {
