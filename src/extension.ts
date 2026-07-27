@@ -18,6 +18,10 @@ let unseenActivityUpdates = 0;
 let statusSuppressedUntil = 0;
 const GIT_COOLDOWN_LOG_PREFIX = 'Git activity detected.\nEncounter cooldown active:';
 
+function sanitizePlayerName(value: string): string {
+  return value.trim().replace(/\s+/g, ' ').slice(0, 24);
+}
+
 async function updateState(context: vscode.ExtensionContext) {
   await saveGameState(context, currentState);
   sidebarProvider?.refresh(currentState);
@@ -72,7 +76,7 @@ async function handleWebviewMessage(message: unknown, context: vscode.ExtensionC
     return;
   }
 
-  const payload = message as { type?: string; slot?: EquipmentSlotType };
+  const payload = message as { type?: string; slot?: EquipmentSlotType; name?: string };
 
   switch (payload.type) {
     case 'toggleSlotLock':
@@ -93,6 +97,16 @@ async function handleWebviewMessage(message: unknown, context: vscode.ExtensionC
       currentState = resetGameState();
       await updateState(context);
       break;
+    case 'setPlayerName': {
+      const nextName = sanitizePlayerName(payload.name || '');
+      if (!nextName) {
+        return;
+      }
+
+      currentState.player.name = nextName;
+      await updateState(context);
+      break;
+    }
     case 'enterTown':
       enterTown(currentState);
       await updateState(context);

@@ -162,7 +162,10 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
   const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'styles', 'webview.css'));
   const assetBaseUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'assets'));
   const logoUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'assets', 'placeholder.png'));
+  const settingsIconUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'assets', 'settings-icon.png'));
   const backgroundUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'assets', 'panel-background.png'));
+  const heroName = state.player.name.trim();
+  const hasHeroName = heroName.length > 0;
 
   const slots = [
     state.player.equipment.amulet,
@@ -215,7 +218,42 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
   <link href="${styleUri}" rel="stylesheet" />
   <title>Merge & Magic</title>
 </head>
-<body style="--panel-background-image: url('${backgroundUri.toString()}')">
+<body class="${hasHeroName ? 'has-hero-name' : 'needs-hero-name'}" style="--panel-background-image: url('${backgroundUri.toString()}')">
+  <button class="settings-fab" type="button" data-action="open-settings" aria-label="Open settings"${hasHeroName ? '' : ' hidden'}>
+    <img src="${settingsIconUri.toString()}" alt="" aria-hidden="true" />
+  </button>
+
+  <div class="settings-backdrop" data-action="close-settings" hidden></div>
+  <aside class="settings-drawer" aria-hidden="true" hidden>
+    <div class="drawer-header">
+      <div class="drawer-title">Settings</div>
+      <button class="drawer-close" type="button" data-action="close-settings" aria-label="Close settings">✕</button>
+    </div>
+    <form class="settings-form" data-form="name" autocomplete="off">
+      <label class="field-label" for="settings-player-name">Hero name</label>
+      <textarea class="name-input" id="settings-player-name" data-player-name-input rows="1" wrap="off" maxlength="24" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">${escapeHtml(heroName)}</textarea>
+      <button class="settings-save" type="submit">Save name</button>
+    </form>
+  </aside>
+
+  <section class="onboarding-screen"${hasHeroName ? ' hidden' : ''} data-onboarding-screen>
+    <div class="onboarding-panel">
+      <div class="onboarding-mark">
+        <div class="brand-logo onboarding-logo" style="background-image: url('${logoUri.toString()}')"></div>
+      </div>
+      <div class="onboarding-copy">
+        <div class="onboarding-kicker">Merge & Magic</div>
+        <h1 class="onboarding-title">Name your hero</h1>
+        <p class="onboarding-text">Give your adventurer a name before the journey begins.</p>
+      </div>
+      <form class="onboarding-form" data-form="name" autocomplete="off">
+        <label class="field-label" for="onboarding-player-name">Hero name</label>
+        <textarea class="name-input" id="onboarding-player-name" data-player-name-input rows="1" wrap="off" maxlength="24" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">${escapeHtml(heroName)}</textarea>
+        <button class="onboarding-submit" type="submit">Begin adventure</button>
+      </form>
+    </div>
+  </section>
+
   <div class="page">
     <section class="top-panel">
       <div class="brand-block">
@@ -224,6 +262,10 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
           <div class="gold-label">Gold</div>
           <div class="gold-value" data-top-stat="gold">${formatGold(state.player.gold)}</div>
         </div>
+      </div>
+      <div class="hero-banner">
+        <div class="hero-label">Hero</div>
+        <div class="hero-value" data-hero-name>${hasHeroName ? escapeHtml(heroName) : 'Unnamed Adventurer'}</div>
       </div>
       <div class="stats-grid">
         <div class="stat-pill">
@@ -294,6 +336,7 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
     let lastTopStatsKey = '';
     let lastEquipmentKey = '';
     let lastLogKey = '';
+    let settingsOpen = false;
 
     function notifyViewActive() {
       vscode.postMessage({ type: 'viewActive' });
@@ -345,6 +388,51 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
       const element = document.querySelector(selector);
       if (element) {
         element.style.width = clampPercent(percent) + '%';
+      }
+    }
+
+    function getHeroName() {
+      return (currentState.player.name || '').trim();
+    }
+
+    function normalizeHeroName(value) {
+      return String(value || '').trim().replace(/\\s+/g, ' ').slice(0, 24);
+    }
+
+    function updateIdentity(force) {
+      const heroName = getHeroName();
+      const hasHeroName = heroName.length > 0;
+      const title = hasHeroName ? heroName : 'Unnamed Adventurer';
+      const onboarding = document.querySelector('[data-onboarding-screen]');
+      const settingsButton = document.querySelector('[data-action="open-settings"]');
+      const settingsDrawer = document.querySelector('.settings-drawer');
+      const settingsBackdrop = document.querySelector('.settings-backdrop');
+
+      document.body.classList.toggle('needs-hero-name', !hasHeroName);
+      document.body.classList.toggle('has-hero-name', hasHeroName);
+      document.body.classList.toggle('settings-open', settingsOpen);
+
+      setText('[data-hero-name]', title);
+
+      if (onboarding) {
+        onboarding.hidden = hasHeroName;
+        onboarding.style.display = hasHeroName ? 'none' : 'grid';
+      }
+
+      if (settingsButton) {
+        settingsButton.hidden = !hasHeroName;
+        settingsButton.style.display = hasHeroName ? 'inline-flex' : 'none';
+      }
+
+      if (settingsDrawer) {
+        settingsDrawer.hidden = !settingsOpen;
+        settingsDrawer.setAttribute('aria-hidden', settingsOpen ? 'false' : 'true');
+        settingsDrawer.style.display = settingsOpen ? 'block' : 'none';
+      }
+
+      if (settingsBackdrop) {
+        settingsBackdrop.hidden = !settingsOpen;
+        settingsBackdrop.style.display = settingsOpen ? 'block' : 'none';
       }
     }
 
@@ -547,11 +635,77 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
     }
 
     function renderState(force) {
+      updateIdentity(force);
       renderTopStats(force);
       updateStatus();
       renderEquipment(force);
       renderLog(force);
     }
+
+    function setSettingsOpen(open) {
+      settingsOpen = open;
+      updateIdentity(false);
+    }
+
+    document.querySelector('[data-action="open-settings"]')?.addEventListener('click', () => {
+      setSettingsOpen(true);
+    });
+
+    document.querySelectorAll('[data-action="close-settings"]').forEach((button) => {
+      button.addEventListener('click', () => setSettingsOpen(false));
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && settingsOpen) {
+        setSettingsOpen(false);
+      }
+    });
+
+    function savePlayerName(input) {
+      const nextName = normalizeHeroName(input.value);
+      if (!nextName) {
+        input.focus();
+        return;
+      }
+
+      document.querySelectorAll('[data-player-name-input]').forEach((field) => {
+        if (field instanceof HTMLTextAreaElement) {
+          field.value = nextName;
+        }
+      });
+      currentState.player.name = nextName;
+      renderState(true);
+      vscode.postMessage({ type: 'setPlayerName', name: nextName });
+      setSettingsOpen(false);
+    }
+
+    document.querySelectorAll('form[data-form="name"]').forEach((form) => {
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const input = form.querySelector('[data-player-name-input]');
+        if (input instanceof HTMLTextAreaElement) {
+          savePlayerName(input);
+        }
+      });
+    });
+
+    document.querySelectorAll('[data-player-name-input]').forEach((input) => {
+      if (!(input instanceof HTMLTextAreaElement)) {
+        return;
+      }
+
+      input.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' || event.shiftKey) {
+          return;
+        }
+
+        event.preventDefault();
+        const form = input.closest('form[data-form="name"]');
+        if (form) {
+          form.requestSubmit();
+        }
+      });
+    });
 
     document.querySelector('[data-action="town-toggle"]')?.addEventListener('click', () => {
       if (!currentState.town.inTown) {

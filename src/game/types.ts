@@ -76,6 +76,7 @@ export type Enemy = {
 };
 
 export type Player = {
+  name: string;
   level: number;
   xp: number;
   gold: number;
