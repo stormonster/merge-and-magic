@@ -132,6 +132,12 @@ body {
   gap: 8px;
 }
 
+.settings-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
 .settings-hero-row {
   display: grid;
   gap: 6px;
@@ -191,6 +197,7 @@ body {
 }
 
 .settings-save,
+.settings-cancel,
 .onboarding-submit {
   min-width: 0;
   border: 1px solid rgba(217, 154, 58, 0.72);
@@ -207,9 +214,15 @@ body {
 }
 
 .settings-save:hover,
+.settings-cancel:hover,
 .onboarding-submit:hover {
   border-color: #d99a3a;
   color: #ffe0a3;
+}
+
+.settings-cancel {
+  background: #171419;
+  color: #d7cab2;
 }
 
 .onboarding-screen {

@@ -232,7 +232,10 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
     <form class="settings-form" data-form="name" autocomplete="off">
       <label class="field-label" for="settings-player-name">Hero name</label>
       <textarea class="name-input" id="settings-player-name" data-player-name-input rows="1" wrap="off" maxlength="24" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">${escapeHtml(heroName)}</textarea>
-      <button class="settings-save" type="submit">Save name</button>
+      <div class="settings-actions">
+        <button class="settings-cancel" type="button" data-action="close-settings">Cancel</button>
+        <button class="settings-save" type="submit">Save</button>
+      </div>
     </form>
   </aside>
 
@@ -397,6 +400,14 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
 
     function normalizeHeroName(value) {
       return String(value || '').trim().replace(/\\s+/g, ' ').slice(0, 24);
+    }
+
+    function syncPlayerNameInputs(value) {
+      document.querySelectorAll('[data-player-name-input]').forEach((field) => {
+        if (field instanceof HTMLTextAreaElement) {
+          field.value = value;
+        }
+      });
     }
 
     function updateIdentity(force) {
@@ -644,6 +655,9 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
 
     function setSettingsOpen(open) {
       settingsOpen = open;
+      if (open) {
+        syncPlayerNameInputs(getHeroName());
+      }
       updateIdentity(false);
     }
 
@@ -652,11 +666,15 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
     });
 
     document.querySelectorAll('[data-action="close-settings"]').forEach((button) => {
-      button.addEventListener('click', () => setSettingsOpen(false));
+      button.addEventListener('click', () => {
+        syncPlayerNameInputs(getHeroName());
+        setSettingsOpen(false);
+      });
     });
 
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape' && settingsOpen) {
+        syncPlayerNameInputs(getHeroName());
         setSettingsOpen(false);
       }
     });
@@ -668,11 +686,7 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
         return;
       }
 
-      document.querySelectorAll('[data-player-name-input]').forEach((field) => {
-        if (field instanceof HTMLTextAreaElement) {
-          field.value = nextName;
-        }
-      });
+      syncPlayerNameInputs(nextName);
       currentState.player.name = nextName;
       renderState(true);
       vscode.postMessage({ type: 'setPlayerName', name: nextName });
