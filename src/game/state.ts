@@ -35,6 +35,7 @@ export function createInitialGameState(): GameState {
     version: 1,
     player: {
       name: '',
+      suffix: '',
       level: 1,
       xp: 0,
       gold: 0,

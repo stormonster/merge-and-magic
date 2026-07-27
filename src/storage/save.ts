@@ -23,6 +23,7 @@ export async function loadGameState(context: vscode.ExtensionContext): Promise<G
     player: {
       ...saved.player,
       name: saved.player.name || '',
+      suffix: saved.player.suffix || '',
       maxHp,
       hp: saved.player.hp || maxHp
     },
