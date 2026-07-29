@@ -14,9 +14,43 @@ type FocusTrackerOptions = {
 export function initializeFocusTracker(context: vscode.ExtensionContext, options: FocusTrackerOptions): void {
   let activitySeen = false;
   let processingTick = false;
+  const trackedTestExecutions = new WeakSet<vscode.TaskExecution>();
 
   const markActivity = () => {
     activitySeen = true;
+  };
+
+  const isTestTask = (task: vscode.Task): boolean => {
+    const parts = [task.name, task.source, task.definition?.type, task.definition?.script].filter(Boolean).join(' ').toLowerCase();
+    return parts.includes('test');
+  };
+
+  const handleTaskEnd = async (execution: vscode.TaskExecution, exitCode: number | undefined) => {
+    if (!trackedTestExecutions.has(execution) || exitCode === undefined) {
+      return;
+    }
+
+    trackedTestExecutions.delete(execution);
+    const state = options.getState();
+    await processActivityEvent(
+      state,
+      {
+        type: exitCode === 0 ? 'tests_passed' : 'tests_failed',
+        source: 'test',
+        label: exitCode === 0 ? 'Test suite passed' : 'Test suite failed',
+        weight: 1,
+        metadata: {
+          exitCode,
+          taskName: execution.task.name,
+          taskSource: execution.task.source,
+          taskType: execution.task.definition?.type
+        }
+      },
+      {
+        afterLog: options.onStateChanged
+      }
+    );
+    await options.onStateChanged();
   };
 
   context.subscriptions.push(
@@ -25,7 +59,15 @@ export function initializeFocusTracker(context: vscode.ExtensionContext, options
     vscode.window.onDidChangeActiveTextEditor(markActivity),
     vscode.window.onDidChangeTextEditorSelection(markActivity),
     vscode.debug.onDidStartDebugSession(markActivity),
-    vscode.tasks.onDidStartTask(markActivity)
+    vscode.tasks.onDidStartTask((event) => {
+      markActivity();
+      if (isTestTask(event.execution.task)) {
+        trackedTestExecutions.add(event.execution);
+      }
+    }),
+    vscode.tasks.onDidEndTaskProcess((event) => {
+      void handleTaskEnd(event.execution, event.exitCode);
+    })
   );
 
   const timer = setInterval(() => {

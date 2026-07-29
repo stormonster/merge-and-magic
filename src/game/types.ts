@@ -1,4 +1,5 @@
 import { ActivityEvent } from '../activity/types';
+import type { AchievementId } from './achievements';
 
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'mythic';
 
@@ -103,6 +104,32 @@ export type GameState = {
   player: Player;
   log: GameLogEntry[];
   activityLog: ActivityEvent[];
+  achievements: {
+    unlockedIds: AchievementId[];
+  };
+  progress: {
+    encounters: number;
+    defeats: number;
+    commits: number;
+    rebases: number;
+    testPasses: number;
+    testFailures: number;
+    testFailureStreak: number;
+    bugSuitesResolved: number;
+    refactorCommits: number;
+    hotfixCommits: number;
+    releasePushes: number;
+    fastCommitStreak: number;
+    lastCommitAt: string | null;
+    commitDayStreak: number;
+    lastCommitDay: string | null;
+    minimalistVictories: number;
+    nearDeathRecoveries: number;
+    legendaryItems: number;
+    mergeConflicts: number;
+    midnightCommits: number;
+    maxGreedWins: number;
+  };
   focus: {
     activeMs: number;
   };

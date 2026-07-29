@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { GameState } from '../game/types';
 import { BASE_PLAYER_MAX_HP, createInitialGameState } from '../game/state';
+import { createInitialAchievementProgress } from '../game/achievements';
 
 const SAVE_KEY = 'mergeMagic.gameState';
 
@@ -27,7 +28,14 @@ export async function loadGameState(context: vscode.ExtensionContext): Promise<G
       maxHp,
       hp: saved.player.hp || maxHp
     },
+    achievements: {
+      unlockedIds: saved.achievements?.unlockedIds || []
+    },
     activityLog: saved.activityLog || [],
+    progress: {
+      ...createInitialAchievementProgress(),
+      ...(saved.progress || {})
+    },
     focus: saved.focus || {
       activeMs: 0
     },
