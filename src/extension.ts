@@ -26,6 +26,8 @@ function sanitizePlayerName(value: string): string {
 }
 
 async function updateState(context: vscode.ExtensionContext) {
+  syncAchievementUnlocks(currentState);
+  syncTitleUnlocks(currentState);
   await saveGameState(context, currentState);
   sidebarProvider?.refresh(currentState);
   markActivityUpdate();
@@ -79,7 +81,7 @@ async function handleWebviewMessage(message: unknown, context: vscode.ExtensionC
     return;
   }
 
-  const payload = message as { type?: string; slot?: EquipmentSlotType; name?: string; suffix?: string };
+  const payload = message as { type?: string; slot?: EquipmentSlotType; name?: string; titleId?: string };
 
   switch (payload.type) {
     case 'toggleSlotLock':
@@ -103,13 +105,14 @@ async function handleWebviewMessage(message: unknown, context: vscode.ExtensionC
     case 'saveSettings':
     case 'setPlayerName': {
       const nextName = sanitizePlayerName(payload.name || '');
-      const nextSuffix = sanitizePlayerSuffix(payload.suffix || currentState.player.suffix || '');
+      const nextTitle = normalizeSelectedTitle(currentState, payload.titleId || currentState.player.titleId || '');
       if (!nextName) {
         return;
       }
 
       currentState.player.name = nextName;
-      currentState.player.suffix = nextSuffix;
+      currentState.player.suffix = '';
+      currentState.player.titleId = nextTitle;
       await updateState(context);
       break;
     }

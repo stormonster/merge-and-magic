@@ -33,10 +33,11 @@ export function createInitialEquipment(): Record<EquipmentSlotType, EquipmentSlo
 
 export function createInitialGameState(): GameState {
   return {
-    version: 1,
+    version: 3,
     player: {
       name: '',
       suffix: '',
+      titleId: '',
       level: 1,
       xp: 0,
       gold: 0,

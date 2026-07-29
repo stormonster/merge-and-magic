@@ -21,10 +21,12 @@ export async function loadGameState(context: vscode.ExtensionContext): Promise<G
 
   return {
     ...saved,
+    version: Math.max(saved.version || 0, 3),
     player: {
       ...saved.player,
       name: saved.player.name || '',
-      suffix: saved.player.suffix || '',
+      suffix: '',
+      titleId: saved.player.titleId || '',
       maxHp,
       hp: saved.player.hp || maxHp
     },

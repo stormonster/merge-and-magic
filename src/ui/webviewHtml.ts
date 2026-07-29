@@ -1,33 +1,11 @@
 import * as vscode from 'vscode';
 import { GameLogEntry, GameState, EquipmentSlot, EquipmentSlotType, Rarity } from '../game/types';
 import { xpRequiredForNextLevel } from '../game/progression';
+import { TITLE_METADATA, getAvailableTitleIds, getTitleLabel, TitleId } from '../game/titles';
 
 const FOCUS_TARGET_MS = 5 * 60 * 1000;
 const COMMIT_ENCOUNTER_COOLDOWN_MS = 5 * 60 * 1000;
 const TOWN_ENTRY_COOLDOWN_MS = 5 * 60 * 1000;
-const SUFFIX_OPTIONS = [
-  'the Honorable',
-  'the Bold',
-  'the Wanderer',
-  'the Unbroken',
-  'the Lucky',
-  'the Reckless',
-  'the Relentless',
-  'the Arcane',
-  'the Unhinged',
-  'the Caffeinated',
-  'the Debugger',
-  'the Uncommitted',
-  'the Stalwart',
-  'the Wayfarer',
-  'the Watchful',
-  'the Untamed',
-  'the Resolute',
-  'the Nomad',
-  'the Keen',
-  'the Persistent'
-];
-
 const slotLabels: Record<EquipmentSlotType, string> = {
   helmet: 'Helmet',
   chest: 'Chest',
@@ -48,16 +26,18 @@ function getSlotLabel(slot: EquipmentSlotType) {
   return slotLabels[slot] || slot.replace(/([A-Z])/g, ' $1').replace(/\b\w/g, (match) => match.toUpperCase());
 }
 
-function formatHeroDisplayName(name: string, suffix: string): string {
-  return [name.trim(), suffix.trim()].filter(Boolean).join(' ');
+function formatHeroDisplayName(name: string, title: string): string {
+  return [name.trim(), title.trim()].filter(Boolean).join(' ');
 }
 
-function renderSuffixOptions(selectedSuffix: string): string {
+function renderTitleOptions(state: GameState, selectedTitleId: string): string {
+  const unlocked = getAvailableTitleIds(state);
   return [
-    '<option value="">Choose a suffix</option>',
-    ...SUFFIX_OPTIONS.map((suffix) => {
-      const selected = suffix === selectedSuffix ? ' selected' : '';
-      return `<option value="${escapeHtml(suffix)}"${selected}>${escapeHtml(suffix)}</option>`;
+    '<option value="">No title</option>',
+    ...TITLE_METADATA.map((title) => {
+      const disabled = unlocked.has(title.id as TitleId) ? '' : ' disabled';
+      const selected = title.id === selectedTitleId ? ' selected' : '';
+      return `<option value="${escapeHtml(title.id)}"${disabled}${selected}>${escapeHtml(title.label)}</option>`;
     })
   ].join('');
 }
@@ -201,10 +181,11 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
   const settingsIconUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'assets', 'settings-icon.png'));
   const backgroundUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'assets', 'panel-background.png'));
   const heroName = state.player.name.trim();
-  const heroSuffix = state.player.suffix.trim();
-  const hasHeroIdentity = heroName.length > 0 && heroSuffix.length > 0;
-  const heroDisplayName = hasHeroIdentity ? formatHeroDisplayName(heroName, heroSuffix) : 'Unnamed Adventurer';
-  const nameFormReady = heroName.length > 0 && heroSuffix.length > 0;
+  const heroTitleId = state.player.titleId.trim();
+  const selectedHeroTitleLabel = getTitleLabel(heroTitleId || '');
+  const hasHeroIdentity = heroName.length > 0 && heroTitleId.length > 0;
+  const heroDisplayName = heroName && selectedHeroTitleLabel ? formatHeroDisplayName(heroName, selectedHeroTitleLabel) : heroName || 'Unnamed Adventurer';
+  const nameFormReady = heroName.length > 0 && heroTitleId.length > 0;
 
   const slots = [
     state.player.equipment.amulet,
@@ -271,9 +252,9 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
     <form class="settings-form" data-form="name" autocomplete="off">
       <label class="field-label" for="settings-player-name">Hero name</label>
       <textarea class="name-input" id="settings-player-name" data-player-name-input rows="1" wrap="off" maxlength="24" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">${escapeHtml(heroName)}</textarea>
-      <label class="field-label" for="settings-player-suffix">Hero suffix</label>
-      <select class="name-input suffix-select" id="settings-player-suffix" data-player-suffix-select autocomplete="off">
-        ${renderSuffixOptions(heroSuffix)}
+      <label class="field-label" for="settings-player-title">Hero title</label>
+      <select class="name-input suffix-select" id="settings-player-title" data-player-title-select autocomplete="off">
+        ${renderTitleOptions(state, state.player.titleId || '')}
       </select>
       <div class="settings-actions">
         <button class="settings-cancel" type="button" data-action="close-settings">Cancel</button>
@@ -290,14 +271,14 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
       <div class="onboarding-copy">
         <div class="onboarding-kicker">Merge & Magic</div>
         <h1 class="onboarding-title">Name your hero</h1>
-        <p class="onboarding-text">Choose a name and suffix before the journey begins.</p>
+        <p class="onboarding-text">Choose a name and title before the journey begins.</p>
       </div>
       <form class="onboarding-form" data-form="name" autocomplete="off">
         <label class="field-label" for="onboarding-player-name">Hero name</label>
         <textarea class="name-input" id="onboarding-player-name" data-player-name-input rows="1" wrap="off" maxlength="24" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">${escapeHtml(heroName)}</textarea>
-        <label class="field-label" for="onboarding-player-suffix">Hero suffix</label>
-        <select class="name-input suffix-select" id="onboarding-player-suffix" data-player-suffix-select autocomplete="off">
-          ${renderSuffixOptions(heroSuffix)}
+        <label class="field-label" for="onboarding-player-title">Hero title</label>
+        <select class="name-input suffix-select" id="onboarding-player-title" data-player-title-select autocomplete="off">
+          ${renderTitleOptions(state, state.player.titleId || '')}
         </select>
         <button class="onboarding-submit" type="submit" disabled>Begin adventure</button>
       </form>
@@ -382,6 +363,7 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
     const ASSET_BASE_URI = '${assetBaseUri.toString()}';
     const SLOT_ORDER = ['amulet', 'helmet', 'gloves', 'weapon', 'chest', 'offhand', 'ring1', 'boots', 'ring2'];
     const SLOT_LABELS = ${JSON.stringify(slotLabels)};
+    const TITLE_METADATA = ${JSON.stringify(TITLE_METADATA)};
     let currentState = ${serializedState};
     let lastTopStatsKey = '';
     let lastEquipmentKey = '';
@@ -445,30 +427,57 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
       return (currentState.player.name || '').trim();
     }
 
-    function getHeroSuffix() {
-      return (currentState.player.suffix || '').trim();
-    }
-
     function getHeroDisplayName() {
       const heroName = getHeroName();
-      const heroSuffix = getHeroSuffix();
-      return heroName && heroSuffix ? heroName + ' ' + heroSuffix : 'Unnamed Adventurer';
+      const heroTitle = getHeroTitleLabel();
+      return heroName && heroTitle ? heroName + ' ' + heroTitle : heroName || 'Unnamed Adventurer';
+    }
+
+    function getHeroTitleLabel() {
+      const title = TITLE_METADATA.find((entry) => entry.id === (currentState.player.titleId || ''));
+      return title ? title.label : '';
+    }
+
+    function isTitleUnlocked(titleId) {
+      const title = TITLE_METADATA.find((entry) => entry.id === titleId);
+      if (!title) {
+        return false;
+      }
+
+      if (title.availableAtStart) {
+        return true;
+      }
+
+      return Boolean(title.unlockedByAchievementId && Array.isArray(currentState.achievements?.unlockedIds) && currentState.achievements.unlockedIds.includes(title.unlockedByAchievementId));
+    }
+
+    function renderTitleOptions() {
+      const selectedTitle = currentState.player.titleId || '';
+      return [
+        '<option value="">No title</option>',
+        ...TITLE_METADATA.map((title) => {
+          const selected = title.id === selectedTitle ? ' selected' : '';
+          const disabled = isTitleUnlocked(title.id) ? '' : ' disabled';
+          return '<option value="' + escapeHtml(title.id) + '"' + disabled + selected + '>' + escapeHtml(title.label) + '</option>';
+        })
+      ].join('');
     }
 
     function normalizeHeroName(value) {
       return String(value || '').trim().replace(/\\s+/g, ' ').slice(0, 24);
     }
 
-    function syncSettingsInputs(name, suffix) {
+    function syncSettingsInputs(name, titleId) {
       document.querySelectorAll('[data-player-name-input]').forEach((field) => {
         if (field instanceof HTMLTextAreaElement) {
           field.value = name;
         }
       });
 
-      document.querySelectorAll('[data-player-suffix-select]').forEach((field) => {
+      document.querySelectorAll('[data-player-title-select]').forEach((field) => {
         if (field instanceof HTMLSelectElement) {
-          field.value = suffix;
+          field.innerHTML = renderTitleOptions();
+          field.value = titleId;
         }
       });
     }
@@ -476,7 +485,7 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
     function updateNameFormButtons() {
       document.querySelectorAll('form[data-form="name"]').forEach((form) => {
         const nameInput = form.querySelector('[data-player-name-input]');
-        const suffixInput = form.querySelector('[data-player-suffix-select]');
+        const titleInput = form.querySelector('[data-player-title-select]');
         const submitButton = form.querySelector('button[type="submit"]');
 
         if (!submitButton) {
@@ -484,26 +493,30 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
         }
 
         const hasName = nameInput instanceof HTMLTextAreaElement ? normalizeHeroName(nameInput.value).length > 0 : false;
-        const hasSuffix = suffixInput instanceof HTMLSelectElement ? String(suffixInput.value || '').trim().length > 0 : false;
-        submitButton.disabled = !(hasName && hasSuffix);
+        const hasTitle = titleInput instanceof HTMLSelectElement ? String(titleInput.value || '').trim().length > 0 : false;
+        submitButton.disabled = !(hasName && hasTitle);
       });
     }
 
     function updateIdentity(force) {
       const heroName = getHeroName();
-      const heroSuffix = getHeroSuffix();
-      const hasHeroIdentity = heroName.length > 0 && heroSuffix.length > 0;
-      const title = getHeroDisplayName();
+      const heroTitleLabel = getHeroTitleLabel();
+      const hasHeroIdentity = heroName.length > 0 && heroTitleLabel.length > 0;
       const onboarding = document.querySelector('[data-onboarding-screen]');
       const settingsButton = document.querySelector('[data-action="open-settings"]');
       const settingsDrawer = document.querySelector('.settings-drawer');
       const settingsBackdrop = document.querySelector('.settings-backdrop');
+      const heroTitleElement = document.querySelector('[data-hero-title]');
 
       document.body.classList.toggle('needs-hero-name', !hasHeroIdentity);
       document.body.classList.toggle('has-hero-name', hasHeroIdentity);
       document.body.classList.toggle('settings-open', settingsOpen);
 
-      setText('[data-hero-name]', title);
+      setText('[data-hero-name]', getHeroDisplayName());
+      if (heroTitleElement instanceof HTMLElement) {
+        heroTitleElement.textContent = heroTitleLabel;
+        heroTitleElement.hidden = !heroTitleLabel;
+      }
 
       if (onboarding) {
         onboarding.hidden = hasHeroIdentity;
@@ -738,7 +751,7 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
     function setSettingsOpen(open) {
       settingsOpen = open;
       if (open) {
-        syncSettingsInputs(getHeroName(), getHeroSuffix());
+        syncSettingsInputs(getHeroName(), currentState.player.titleId || '');
       }
       updateIdentity(false);
       updateNameFormButtons();
@@ -750,23 +763,23 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
 
     document.querySelectorAll('[data-action="close-settings"]').forEach((button) => {
       button.addEventListener('click', () => {
-        syncSettingsInputs(getHeroName(), getHeroSuffix());
+        syncSettingsInputs(getHeroName(), currentState.player.titleId || '');
         setSettingsOpen(false);
       });
     });
 
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape' && settingsOpen) {
-        syncSettingsInputs(getHeroName(), getHeroSuffix());
+        syncSettingsInputs(getHeroName(), currentState.player.titleId || '');
         setSettingsOpen(false);
       }
     });
 
     function saveSettings(form) {
       const nameInput = form.querySelector('[data-player-name-input]');
-      const suffixInput = form.querySelector('[data-player-suffix-select]');
+      const titleInput = form.querySelector('[data-player-title-select]');
       const nextName = nameInput instanceof HTMLTextAreaElement ? normalizeHeroName(nameInput.value) : '';
-      const nextSuffix = suffixInput instanceof HTMLSelectElement ? String(suffixInput.value || '').trim() : '';
+      const nextTitle = titleInput instanceof HTMLSelectElement ? String(titleInput.value || '').trim() : '';
 
       if (!nextName) {
         if (nameInput instanceof HTMLTextAreaElement) {
@@ -775,18 +788,19 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
         return;
       }
 
-      if (!nextSuffix) {
-        if (suffixInput instanceof HTMLSelectElement) {
-          suffixInput.focus();
+      if (!nextTitle) {
+        if (titleInput instanceof HTMLSelectElement) {
+          titleInput.focus();
         }
         return;
       }
 
-      syncSettingsInputs(nextName, nextSuffix);
+      syncSettingsInputs(nextName, nextTitle);
       currentState.player.name = nextName;
-      currentState.player.suffix = nextSuffix;
+      currentState.player.suffix = '';
+      currentState.player.titleId = nextTitle;
       renderState(true);
-      vscode.postMessage({ type: 'saveSettings', name: nextName, suffix: nextSuffix });
+      vscode.postMessage({ type: 'saveSettings', name: nextName, titleId: nextTitle });
       setSettingsOpen(false);
     }
 
@@ -797,7 +811,7 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
       });
     });
 
-    document.querySelectorAll('[data-player-name-input], [data-player-suffix-select]').forEach((input) => {
+    document.querySelectorAll('[data-player-name-input], [data-player-title-select]').forEach((input) => {
       if (input instanceof HTMLTextAreaElement) {
         input.addEventListener('input', updateNameFormButtons);
         input.addEventListener('keydown', (event) => {
