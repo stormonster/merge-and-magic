@@ -10,46 +10,24 @@ import { initializeFocusTracker } from './activity/focusTracker';
 import { resetGameState, toggleEquipmentSlotLock } from './game/engine';
 import { applyPassiveHealing } from './game/health';
 import { enterTown, leaveTown, processTownPurchase } from './game/town';
+import { normalizeSelectedTitle, syncTitleUnlocks } from './game/titles';
+import { syncAchievementUnlocks } from './game/achievements';
 
 let currentState: GameState;
 let sidebarProvider: SidebarViewProvider | undefined;
 let activityStatusItem: vscode.StatusBarItem;
+let gitDebugOutput: vscode.OutputChannel | undefined;
 let unseenActivityUpdates = 0;
 let statusSuppressedUntil = 0;
 const GIT_COOLDOWN_LOG_PREFIX = 'Git activity detected.\nEncounter cooldown active:';
-const PLAYER_SUFFIXES = new Set([
-  'the Honorable',
-  'the Bold',
-  'the Wanderer',
-  'the Unbroken',
-  'the Lucky',
-  'the Reckless',
-  'the Relentless',
-  'the Arcane',
-  'the Unhinged',
-  'the Caffeinated',
-  'the Debugger',
-  'the Uncommitted',
-  'the Stalwart',
-  'the Wayfarer',
-  'the Watchful',
-  'the Untamed',
-  'the Resolute',
-  'the Nomad',
-  'the Keen',
-  'the Persistent'
-]);
 
 function sanitizePlayerName(value: string): string {
   return value.trim().replace(/\s+/g, ' ').slice(0, 24);
 }
 
-function sanitizePlayerSuffix(value: string): string {
-  const suffix = value.trim();
-  return PLAYER_SUFFIXES.has(suffix) ? suffix : '';
-}
-
 async function updateState(context: vscode.ExtensionContext) {
+  syncAchievementUnlocks(currentState);
+  syncTitleUnlocks(currentState);
   await saveGameState(context, currentState);
   sidebarProvider?.refresh(currentState);
   markActivityUpdate();
@@ -103,7 +81,7 @@ async function handleWebviewMessage(message: unknown, context: vscode.ExtensionC
     return;
   }
 
-  const payload = message as { type?: string; slot?: EquipmentSlotType; name?: string; suffix?: string };
+  const payload = message as { type?: string; slot?: EquipmentSlotType; name?: string; titleId?: string };
 
   switch (payload.type) {
     case 'toggleSlotLock':
@@ -127,13 +105,14 @@ async function handleWebviewMessage(message: unknown, context: vscode.ExtensionC
     case 'saveSettings':
     case 'setPlayerName': {
       const nextName = sanitizePlayerName(payload.name || '');
-      const nextSuffix = sanitizePlayerSuffix(payload.suffix || currentState.player.suffix || '');
+      const nextTitle = normalizeSelectedTitle(currentState, payload.titleId || currentState.player.titleId || '');
       if (!nextName) {
         return;
       }
 
       currentState.player.name = nextName;
-      currentState.player.suffix = nextSuffix;
+      currentState.player.suffix = '';
+      currentState.player.titleId = nextTitle;
       await updateState(context);
       break;
     }
@@ -151,6 +130,8 @@ async function handleWebviewMessage(message: unknown, context: vscode.ExtensionC
 export async function activate(context: vscode.ExtensionContext) {
   console.log('Merge & Magic activating');
   currentState = await loadGameState(context);
+  syncAchievementUnlocks(currentState);
+  syncTitleUnlocks(currentState);
   const initialHealing = applyPassiveHealing(currentState);
   if (initialHealing.completed) {
     upsertLogEntryByPrefix(
@@ -174,6 +155,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
   activityStatusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
   context.subscriptions.push(activityStatusItem);
+  gitDebugOutput = vscode.window.createOutputChannel('Merge & Magic Git Debug');
+  context.subscriptions.push(gitDebugOutput);
 
   sidebarProvider = new SidebarViewProvider(
     context.extensionUri,
@@ -199,6 +182,9 @@ export async function activate(context: vscode.ExtensionContext) {
     async (activity, remainingMs) => {
       upsertGitCooldownLog(currentState, activity.label, remainingMs);
       await updateState(context);
+    },
+    (message) => {
+      gitDebugOutput?.appendLine(`${new Date().toISOString()} ${message}`);
     }
   );
 
