@@ -2,6 +2,18 @@
 
 All notable changes to Merge & Magic will be documented in this file.
 
+## [0.2.0] - 2026-07-30
+
+### Added
+- Added a dedicated Achievements page, accessible from a new achievements icon in the top-left corner of the main UI.
+- Added a Diablo/WoW-style achievements list with:
+  - unlocked and locked states
+  - progress text
+  - reward text
+  - visual progress bars
+  - a top-level completion summary
+- Added `assets/achievements-icon.png` for the achievements button.
+
 ## [0.1.1] - 2026-06-19
 
 ### Fixed
