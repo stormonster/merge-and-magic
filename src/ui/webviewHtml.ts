@@ -37,7 +37,7 @@ function renderTitleOptions(state: GameState, selectedTitleId: string): string {
     ...TITLE_METADATA.map((title) => {
       const disabled = unlocked.has(title.id as TitleId) ? '' : ' disabled';
       const selected = title.id === selectedTitleId ? ' selected' : '';
-      return `<option value="${escapeHtml(title.id)}"${disabled}${selected}>${escapeHtml(title.label)}</option>`;
+      return `<option value="${escapeHtml(title.id)}" title="${escapeHtml(title.hint || '')}"${disabled}${selected}>${escapeHtml(title.label)}</option>`;
     })
   ].join('');
 }
@@ -458,7 +458,7 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
         ...TITLE_METADATA.map((title) => {
           const selected = title.id === selectedTitle ? ' selected' : '';
           const disabled = isTitleUnlocked(title.id) ? '' : ' disabled';
-          return '<option value="' + escapeHtml(title.id) + '"' + disabled + selected + '>' + escapeHtml(title.label) + '</option>';
+          return '<option value="' + escapeHtml(title.id) + '" title="' + escapeHtml(title.hint || '') + '"' + disabled + selected + '>' + escapeHtml(title.label) + '</option>';
         })
       ].join('');
     }

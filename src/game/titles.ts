@@ -1,5 +1,6 @@
 import { GameState } from './types';
 import type { AchievementId } from './achievements';
+import { getAchievementLabel } from './achievements';
 
 export type TitleId =
   | 'honorable'
@@ -52,7 +53,9 @@ export type TitleDefinition = {
   unlockedByAchievementId?: AchievementId;
 };
 
-export type TitleMetadata = TitleDefinition;
+export type TitleMetadata = TitleDefinition & {
+  hint: string;
+};
 
 const STARTING_TITLES: TitleDefinition[] = [
   { id: 'honorable', label: 'the Honorable', description: 'Available from the start.', availableAtStart: true },
@@ -228,12 +231,24 @@ export const TITLE_DEFINITIONS: TitleDefinition[] = [
   }
 ];
 
-export const TITLE_METADATA: TitleMetadata[] = TITLE_DEFINITIONS.map(({ id, label, description, availableAtStart, unlockedByAchievementId }) => ({
-  id,
-  label,
-  description,
-  availableAtStart,
-  unlockedByAchievementId
+export function getTitleHint(titleId: TitleId | string | ''): string {
+  const title = getTitleDefinition(titleId);
+  if (!title) {
+    return '';
+  }
+
+  if (title.availableAtStart) {
+    return `Available from the start.`;
+  }
+
+  const achievementLabel = title.unlockedByAchievementId ? getAchievementLabel(title.unlockedByAchievementId) : '';
+  const rewardSource = achievementLabel ? `Reward from achievement: ${achievementLabel}.` : 'Reward from an achievement.';
+  return `${rewardSource} ${title.description}`.trim();
+}
+
+export const TITLE_METADATA: TitleMetadata[] = TITLE_DEFINITIONS.map((definition) => ({
+  ...definition,
+  hint: getTitleHint(definition.id)
 }));
 
 export function getTitleDefinition(titleId: TitleId | string | ''): TitleDefinition | undefined {

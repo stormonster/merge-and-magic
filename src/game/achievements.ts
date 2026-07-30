@@ -250,6 +250,18 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
   }
 ];
 
+export function getAchievementDefinition(achievementId: AchievementId | string | ''): AchievementDefinition | undefined {
+  if (!achievementId) {
+    return undefined;
+  }
+
+  return ACHIEVEMENT_DEFINITIONS.find((achievement) => achievement.id === achievementId);
+}
+
+export function getAchievementLabel(achievementId: AchievementId | string | ''): string {
+  return getAchievementDefinition(achievementId)?.label || '';
+}
+
 export function createInitialAchievementProgress(): AchievementProgress {
   return {
     encounters: 0,
