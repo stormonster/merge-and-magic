@@ -41,14 +41,6 @@
       {
         "command": "mergeMagic.resetSave",
         "title": "Merge & Magic: Reset Save"
-      },
-      {
-        "command": "mergeMagic.developer.dropLoot",
-        "title": "Merge & Magic: Developer - Drop Loot"
-      },
-      {
-        "command": "mergeMagic.developer.startEncounter",
-        "title": "Merge & Magic: Developer - Start Encounter"
       }
     ],
     "viewsContainers": {
