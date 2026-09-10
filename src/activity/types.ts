@@ -6,9 +6,11 @@ export type ActivityEventType =
   | 'git_pull'
   | 'git_push'
   | 'git_merge'
+  | 'git_rebase'
   | 'git_conflict'
   | 'git_stash'
   | 'tests_passed'
+  | 'tests_failed'
   | 'merge_completed'
   | 'focus_session';
 

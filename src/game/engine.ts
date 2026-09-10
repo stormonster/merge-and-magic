@@ -6,6 +6,14 @@ import { handleLootDrop, createItem, selectItemRarity, getGreedBonus } from './l
 import { pickRandomEnemy } from './encounters';
 import { randomInt } from './random';
 import { calculateDefeatDamage, startHealingIfNeeded } from './health';
+import {
+  recordDefeat,
+  recordEncounter,
+  recordLegendaryItem,
+  recordMaxGreedVictory,
+  recordMinimalistVictory,
+  recordNearDeathRecovery
+} from './achievements';
 import { ITEM_TEMPLATES } from '../data/itemTemplates';
 
 type ActivityTriggerOptions = {
@@ -90,6 +98,9 @@ export async function openLootChest(state: GameState, options?: LootChestOpenOpt
     }
     await delay(options?.revealDurationMs ?? 1100);
 
+    if (pendingItem.item.rarity === 'legendary' || pendingItem.item.rarity === 'mythic') {
+      recordLegendaryItem(state);
+    }
     const result = handleLootDrop(state.player, pendingItem.item);
     addLogEntry(
       state,
@@ -149,9 +160,11 @@ export async function triggerEncounter(state: GameState, options?: ActivityTrigg
   const enemy = pickRandomEnemy();
   const chance = calculateWinChance(state.player, enemy);
   const won = Math.random() <= chance;
+  recordEncounter(state);
   await addTimedLogEntry(state, 'encounter', `⚔ Encounter: ${enemy.name} appeared.\nTrigger: ${getTriggerLabel(options)}`, options);
 
   if (!won) {
+    recordDefeat(state);
     const damage = calculateDefeatDamage(state, enemy);
     state.player.hp = Math.max(1, state.player.hp - damage);
     await addTimedLogEntry(
@@ -161,6 +174,7 @@ export async function triggerEncounter(state: GameState, options?: ActivityTrigg
       options
     );
     if (startHealingIfNeeded(state)) {
+      recordNearDeathRecovery(state);
       await addTimedLogEntry(state, 'system', 'Recovery started. Activities pause while HP returns. A commit restores you immediately.', options);
     }
     return;
@@ -176,6 +190,13 @@ export async function triggerEncounter(state: GameState, options?: ActivityTrigg
   const unlockedSlots = Object.values(state.player.equipment).filter((slot) => !slot.locked).length;
   const greedBonus = getGreedBonus(unlockedSlots);
   const lootChance = Math.min(0.95, Math.max(0.05, enemy.baseLootDropChance + greedBonus));
+
+  if (unlockedSlots >= Object.values(state.player.equipment).length) {
+    recordMaxGreedVictory(state);
+  }
+  if (unlockedSlots === 1) {
+    recordMinimalistVictory(state);
+  }
 
   await addTimedLogEntry(state, 'system', `🎲 Greed Bonus: ${unlockedSlots} unlocked slots gave +${Math.round(greedBonus * 100)}% loot chance.`, options);
 

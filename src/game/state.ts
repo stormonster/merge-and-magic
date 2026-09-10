@@ -1,5 +1,6 @@
 import { EquipmentSlotType, EquipmentSlot, GameState, PlayerStats } from './types';
 import { GameLogEntry } from './types';
+import { createInitialAchievementProgress } from './achievements';
 
 const EQUIPMENT_SLOTS: EquipmentSlotType[] = [
   'helmet',
@@ -32,8 +33,11 @@ export function createInitialEquipment(): Record<EquipmentSlotType, EquipmentSlo
 
 export function createInitialGameState(): GameState {
   return {
-    version: 1,
+    version: 3,
     player: {
+      name: '',
+      suffix: '',
+      titleId: '',
       level: 1,
       xp: 0,
       gold: 0,
@@ -51,6 +55,10 @@ export function createInitialGameState(): GameState {
       }
     ],
     activityLog: [],
+    achievements: {
+      unlockedIds: []
+    },
+    progress: createInitialAchievementProgress(),
     focus: {
       activeMs: 0
     },

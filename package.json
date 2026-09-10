@@ -2,7 +2,7 @@
   "name": "merge-and-magic",
   "displayName": "Merge & Magic",
   "description": "A VS Code extension that turns development activity into auto-loot RPG progression.",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "publisher": "stormonster",
   "license": "MIT",
   "icon": "assets/marketplace-icon.png",

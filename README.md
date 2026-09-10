@@ -34,6 +34,9 @@ It is intentionally lightweight: no build dashboards, no productivity scoring, n
 - Town visits where your character heals and shops for upgrades.
 - Passive recovery after defeats.
 - A dedicated activity bar view that can stay open while you work.
+- Hero naming and title selection when you first start, plus a settings drawer to change them later.
+- A progression achievements page with RPG-style achievement cards and title rewards.
+- Unlockable titles that can be selected from the hero identity screens once earned.
 
 ## How It Works
 
@@ -53,6 +56,8 @@ Merge & Magic rewards activity in a few different ways:
 - **Git activity** can trigger encounters. This includes commits, branch switches, pulls, pushes, merges, conflicts, and stashes.
 - **Winning encounters** grants XP and gold, and may also drop loot.
 - **Town visits** can buy and equip items with gold while also healing your character.
+- **Hero identity** starts with a name and title prompt, and can later be edited from the settings drawer.
+- **Achievements** track long-term goals and can reward titles when unlocked.
 
 Some activity is intentionally throttled. Git-triggered encounters have a 5-minute cooldown, and town entry has a 5-minute cooldown. While you are in town or recovering from defeat, most activity rewards pause.
 

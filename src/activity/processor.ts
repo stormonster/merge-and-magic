@@ -2,6 +2,14 @@ import { triggerEncounter, triggerTestLoot } from '../game/engine';
 import { addLogEntry, upsertLogEntryByPrefix } from '../game/state';
 import { GameState } from '../game/types';
 import { applyPassiveHealing, healToFull, isHealing } from '../game/health';
+import {
+  recordCommit,
+  recordMergeConflict,
+  recordRebase,
+  recordReleasePush,
+  recordTestFailure,
+  recordTestPass
+} from '../game/achievements';
 import { ActivityEvent, ActivityEventInput } from './types';
 
 const ACTIVITY_LOG_LIMIT = 100;
@@ -66,12 +74,28 @@ export async function processActivityEvent(
   switch (event.type) {
     case 'manual_encounter':
     case 'git_commit':
-    case 'git_branch_switch':
     case 'git_pull':
     case 'git_push':
     case 'git_merge':
+    case 'git_rebase':
     case 'git_conflict':
     case 'git_stash':
+      if (event.type === 'git_commit') {
+        const commitCreatedAt = event.metadata?.commitCreatedAt ? new Date(String(event.metadata.commitCreatedAt)) : new Date(event.createdAt);
+        recordCommit(state, commitCreatedAt, String(event.metadata?.commitSubject || ''));
+      }
+      if (event.type === 'git_rebase') {
+        recordRebase(state);
+      }
+      if (event.type === 'git_conflict') {
+        recordMergeConflict(state);
+      }
+      if (event.type === 'git_push') {
+        const branchName = String(event.metadata?.branchName || '').trim().toLowerCase();
+        if (branchName.startsWith('release') && event.metadata?.releasePushCounted !== true) {
+          recordReleasePush(state);
+        }
+      }
       if (event.type === 'git_commit' && healingActive) {
         healToFull(state);
         upsertLogEntryByPrefix(state, 'Recovery started.', 'system', 'Commit landed. HP restored to full.');
@@ -80,6 +104,12 @@ export async function processActivityEvent(
         }
       }
       await triggerEncounter(state, activityOptions);
+      break;
+    case 'git_branch_switch':
+      addLogEntry(state, 'system', `🔀 Branch switch: ${event.metadata?.branchName ? String(event.metadata.branchName) : 'updated'}\nTrigger: ${event.label}`);
+      if (options?.afterLog) {
+        await options.afterLog();
+      }
       break;
     case 'manual_loot':
       await triggerTestLoot(state, activityOptions);
@@ -91,6 +121,22 @@ export async function processActivityEvent(
       }
       break;
     case 'tests_passed':
+      if (recordTestPass(state)) {
+        addLogEntry(state, 'system', `🏆 Tested: tests failed, then passed again.\nTrigger: ${event.label}`);
+      } else {
+        addLogEntry(state, 'system', `✅ Test suite passed.\nTrigger: ${event.label}`);
+      }
+      if (options?.afterLog) {
+        await options.afterLog();
+      }
+      break;
+    case 'tests_failed':
+      recordTestFailure(state);
+      addLogEntry(state, 'system', `❌ Test suite failed.\nTrigger: ${event.label}`);
+      if (options?.afterLog) {
+        await options.afterLog();
+      }
+      break;
     case 'merge_completed':
       addLogEntry(state, 'system', `The party takes note. Rewards for this activity type are coming soon.\nTrigger: ${event.label}`);
       if (options?.afterLog) {
