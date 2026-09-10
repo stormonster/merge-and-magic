@@ -7,7 +7,7 @@ import { initializeGitIntegration } from './git/gitIntegration';
 import { processActivityEvent } from './activity/processor';
 import { ActivityEventInput } from './activity/types';
 import { initializeFocusTracker } from './activity/focusTracker';
-import { resetGameState, toggleEquipmentSlotLock } from './game/engine';
+import { resetGameState, toggleEquipmentSlotLock, openLootChest } from './game/engine';
 import { applyPassiveHealing } from './game/health';
 import { enterTown, leaveTown, processTownPurchase } from './game/town';
 
@@ -99,6 +99,10 @@ async function handleWebviewMessage(message: unknown, context: vscode.ExtensionC
       break;
     case 'leaveTown':
       leaveTown(currentState);
+      await updateState(context);
+      break;
+    case 'openLootChest':
+      openLootChest(currentState);
       await updateState(context);
       break;
   }

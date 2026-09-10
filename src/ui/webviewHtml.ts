@@ -272,6 +272,13 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
       <div class="town-status" data-town-status>${townStatusLabel}</div>
     </section>
 
+    <section class="loot-chest-panel">
+      <button class="loot-chest-button${state.lootChest.pending.length > 0 ? ' has-loot' : ''}" data-action="open-loot-chest" data-chest-count="${state.lootChest.pending.length}">
+        <span class="loot-chest-icon">🎁</span>
+        <span class="loot-chest-label">${state.lootChest.pending.length > 0 ? `Open chest (${state.lootChest.pending.length})` : 'Chest empty'}</span>
+      </button>
+    </section>
+
     <section class="equipment-grid" data-section="equipment">
       ${equipmentButtons.join('')}
     </section>
@@ -550,8 +557,30 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
       renderTopStats(force);
       updateStatus();
       renderEquipment(force);
+      renderLootChest();
       renderLog(force);
     }
+
+    function renderLootChest() {
+      const count = currentState.lootChest.pending.length;
+      const button = document.querySelector('[data-action="open-loot-chest"]');
+      if (!button) {
+        return;
+      }
+      button.classList.toggle('has-loot', count > 0);
+      button.dataset.chestCount = String(count);
+      const label = button.querySelector('.loot-chest-label');
+      if (label) {
+        label.textContent = count > 0 ? 'Open chest (' + count + ')' : 'Chest empty';
+      }
+    }
+
+    document.querySelector('[data-action="open-loot-chest"]')?.addEventListener('click', () => {
+      if (currentState.lootChest.pending.length === 0) {
+        return;
+      }
+      vscode.postMessage({ type: 'openLootChest' });
+    });
 
     document.querySelector('[data-action="town-toggle"]')?.addEventListener('click', () => {
       if (!currentState.town.inTown) {

@@ -38,6 +38,9 @@ export async function loadGameState(context: vscode.ExtensionContext): Promise<G
       inTown: false,
       enteredAt: null,
       purchases: 0
+    },
+    lootChest: saved.lootChest || {
+      pending: []
     }
   };
 }

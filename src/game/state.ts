@@ -64,6 +64,9 @@ export function createInitialGameState(): GameState {
       inTown: false,
       enteredAt: null,
       purchases: 0
+    },
+    lootChest: {
+      pending: []
     }
   };
 }

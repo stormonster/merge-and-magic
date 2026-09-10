@@ -88,12 +88,19 @@ export type Player = {
 export type GameLogEntry = {
   id: string;
   createdAt: string;
-  type: 'encounter' | 'loot_equipped' | 'loot_missed' | 'level_up' | 'system';
+  type: 'encounter' | 'loot_equipped' | 'loot_missed' | 'level_up' | 'system' | 'loot_chest';
   message: string;
   highlights?: {
     text: string;
     rarity: Rarity;
   }[];
+};
+
+export type PendingLootItem = {
+  id: string;
+  item: Item;
+  triggerLabel: string;
+  createdAt: string;
 };
 
 export type GameState = {
@@ -114,5 +121,8 @@ export type GameState = {
     inTown: boolean;
     enteredAt: string | null;
     purchases: number;
+  };
+  lootChest: {
+    pending: PendingLootItem[];
   };
 };

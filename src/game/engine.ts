@@ -60,6 +60,33 @@ function getTriggerLabel(options?: ActivityTriggerOptions): string {
   return options?.triggerLabel || 'Manual trigger';
 }
 
+function queueLootDrop(state: GameState, item: Item, options?: ActivityTriggerOptions): void {
+  state.lootChest.pending.push({
+    id: crypto.randomUUID(),
+    item,
+    triggerLabel: getTriggerLabel(options),
+    createdAt: new Date().toISOString()
+  });
+}
+
+export function openLootChest(state: GameState): void {
+  const pending = state.lootChest.pending;
+  state.lootChest.pending = [];
+
+  for (const pendingItem of pending) {
+    const result = handleLootDrop(state.player, pendingItem.item);
+    addLogEntry(
+      state,
+      result.type === 'equipped' ? 'loot_equipped' : 'loot_missed',
+      `${result.message}\nTrigger: ${pendingItem.triggerLabel}`,
+      [
+        { text: result.item.name, rarity: result.item.rarity },
+        ...(result.type === 'equipped' && result.replacedItem ? [{ text: result.replacedItem.name, rarity: result.replacedItem.rarity }] : [])
+      ]
+    );
+  }
+}
+
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -84,16 +111,12 @@ export async function triggerTestLoot(state: GameState, options?: ActivityTrigge
   const rarity = selectItemRarity(Object.values(state.player.equipment).filter((slot) => slot.locked).length);
   const template = ITEM_TEMPLATES[randomInt(0, ITEM_TEMPLATES.length - 1)];
   const item = createItem(state.player.level, rarity, template);
-  const result = handleLootDrop(state.player, item);
+  queueLootDrop(state, item, options);
   await addTimedLogEntry(
     state,
-    result.type === 'equipped' ? 'loot_equipped' : 'loot_missed',
-    `${result.message}\nTrigger: ${getTriggerLabel(options)}`,
-    options,
-    [
-      { text: result.item.name, rarity: result.item.rarity },
-      ...(result.type === 'equipped' && result.replacedItem ? [{ text: result.replacedItem.name, rarity: result.replacedItem.rarity }] : [])
-    ]
+    'loot_chest',
+    `🎁 A loot chest appeared! Open it to reveal what's inside.\nTrigger: ${getTriggerLabel(options)}`,
+    options
   );
 }
 
@@ -139,15 +162,11 @@ export async function triggerEncounter(state: GameState, options?: ActivityTrigg
   const rarity = selectItemRarity(Object.values(state.player.equipment).filter((slot) => slot.locked).length);
   const template = ITEM_TEMPLATES[randomInt(0, ITEM_TEMPLATES.length - 1)];
   const item = createItem(state.player.level, rarity, template);
-  const lootResult = handleLootDrop(state.player, item);
+  queueLootDrop(state, item, options);
   await addTimedLogEntry(
     state,
-    lootResult.type === 'equipped' ? 'loot_equipped' : 'loot_missed',
-    `${lootResult.message}\nTrigger: ${getTriggerLabel(options)}`,
-    options,
-    [
-      { text: lootResult.item.name, rarity: lootResult.item.rarity },
-      ...(lootResult.type === 'equipped' && lootResult.replacedItem ? [{ text: lootResult.replacedItem.name, rarity: lootResult.replacedItem.rarity }] : [])
-    ]
+    'loot_chest',
+    `🎁 ${enemy.name} dropped a loot chest! Open it to reveal your reward.\nTrigger: ${getTriggerLabel(options)}`,
+    options
   );
 }
