@@ -2,6 +2,27 @@
 
 All notable changes to Merge & Magic will be documented in this file.
 
+## [0.3.0] - 2026-09-10
+
+### Added
+
+- Added a loot chest that stores item drops until the player chooses to reveal them.
+- Added distinct artwork for an empty open chest and a glowing chest with loot waiting inside.
+- Added sequential item reveals with equipment sprites, rarity-colored effects, item names, and pacing between rewards.
+
+### Changed
+
+- Moved the town and loot chest controls below the equipment grid.
+- Reduced VSIX size by excluding development files, virtual environments, and raw sprite sheets.
+
+## [0.2.0] - 2026-07-30
+
+### Added
+
+- Added a dedicated Achievements page accessible from the achievements icon.
+- Added locked and unlocked achievement states, progress bars, reward details, and completion tracking.
+- Added hero names and selectable titles, including titles unlocked through achievements.
+
 ## [0.1.1] - 2026-06-19
 
 ### Fixed
