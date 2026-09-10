@@ -14,6 +14,13 @@ type ActivityTriggerOptions = {
   logDelayMs?: number;
 };
 
+type LootChestOpenOptions = {
+  onReveal?: (item: Item, index: number, total: number) => Promise<void>;
+  afterItem?: () => Promise<void>;
+  revealDurationMs?: number;
+  itemDelayMs?: number;
+};
+
 export function resetGameState(): GameState {
   return createInitialGameState();
 }
@@ -69,11 +76,20 @@ function queueLootDrop(state: GameState, item: Item, options?: ActivityTriggerOp
   });
 }
 
-export function openLootChest(state: GameState): void {
-  const pending = state.lootChest.pending;
-  state.lootChest.pending = [];
+export async function openLootChest(state: GameState, options?: LootChestOpenOptions): Promise<void> {
+  const total = state.lootChest.pending.length;
 
-  for (const pendingItem of pending) {
+  for (let index = 0; index < total; index += 1) {
+    const pendingItem = state.lootChest.pending.shift();
+    if (!pendingItem) {
+      break;
+    }
+
+    if (options?.onReveal) {
+      await options.onReveal(pendingItem.item, index, total);
+    }
+    await delay(options?.revealDurationMs ?? 1100);
+
     const result = handleLootDrop(state.player, pendingItem.item);
     addLogEntry(
       state,
@@ -86,6 +102,13 @@ export function openLootChest(state: GameState): void {
           : [])
       ]
     );
+
+    if (options?.afterItem) {
+      await options.afterItem();
+    }
+    if (index < total - 1) {
+      await delay(options?.itemDelayMs ?? 250);
+    }
   }
 }
 

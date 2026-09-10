@@ -275,6 +275,7 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
     </section>
 
     <section class="adventure-actions">
+      <div class="loot-reveal-stage" data-loot-reveal-stage aria-live="polite"></div>
       <div class="town-panel">
         <button class="town-button" data-action="town-toggle"${townButtonDisabled ? ' disabled' : ''}>${townButtonLabel}</button>
         <div class="town-status" data-town-status>${townStatusLabel}</div>
@@ -305,6 +306,7 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
     let lastTopStatsKey = '';
     let lastEquipmentKey = '';
     let lastLogKey = '';
+    let lootChestOpening = false;
 
     function notifyViewActive() {
       vscode.postMessage({ type: 'viewActive' });
@@ -574,7 +576,7 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
       }
 
       button.classList.toggle('has-loot', count > 0);
-      button.disabled = count === 0;
+      button.disabled = count === 0 || lootChestOpening;
       button.dataset.chestCount = String(count);
       button.setAttribute('aria-label', count > 0
         ? 'Open treasure chest with ' + count + ' item' + (count === 1 ? '' : 's')
@@ -586,8 +588,27 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
 
       const label = button.querySelector('.loot-chest-label');
       if (label) {
-        label.textContent = count > 0 ? 'Open chest (' + count + ')' : 'Chest empty';
+        label.textContent = lootChestOpening ? 'Revealing...' : count > 0 ? 'Open chest (' + count + ')' : 'Chest empty';
       }
+    }
+
+    function revealLootItem(item, index, total) {
+      const stage = document.querySelector('[data-loot-reveal-stage]');
+      if (!stage || !item) {
+        return;
+      }
+
+      const reveal = document.createElement('div');
+      reveal.className = 'loot-reveal rarity-' + escapeHtml(item.rarity || 'common');
+      reveal.innerHTML = [
+        '<div class="loot-reveal-burst"></div>',
+        '<img class="loot-reveal-item" src="' + ASSET_BASE_URI + '/' + item.icon.split('/').map(encodeURIComponent).join('/') + '" alt="" />',
+        '<div class="loot-reveal-name">' + escapeHtml(item.name) + '</div>',
+        total > 1 ? '<div class="loot-reveal-count">' + (index + 1) + ' / ' + total + '</div>' : ''
+      ].join('');
+      stage.replaceChildren(reveal);
+      reveal.addEventListener('animationend', () => reveal.remove(), { once: true });
+      setTimeout(() => reveal.remove(), 1250);
     }
 
     document.querySelector('[data-action="town-toggle"]')?.addEventListener('click', () => {
@@ -617,11 +638,28 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
 
     window.addEventListener('message', (event) => {
       const message = event.data;
-      if (!message || message.type !== 'stateUpdate') {
+      if (!message) {
         return;
       }
-      currentState = message.state;
-      renderState(false);
+
+      if (message.type === 'lootRevealStart') {
+        lootChestOpening = true;
+        renderLootChest();
+        return;
+      }
+      if (message.type === 'lootReveal') {
+        revealLootItem(message.item, message.index, message.total);
+        return;
+      }
+      if (message.type === 'lootRevealEnd') {
+        lootChestOpening = false;
+        renderLootChest();
+        return;
+      }
+      if (message.type === 'stateUpdate') {
+        currentState = message.state;
+        renderState(false);
+      }
     });
 
     renderState(true);
