@@ -7,7 +7,13 @@ import { initializeGitIntegration } from './git/gitIntegration';
 import { processActivityEvent } from './activity/processor';
 import { ActivityEventInput } from './activity/types';
 import { initializeFocusTracker } from './activity/focusTracker';
-import { resetGameState, toggleEquipmentSlotLock, openLootChest } from './game/engine';
+import {
+  openLootChest,
+  resetGameState,
+  toggleEquipmentSlotLock,
+  triggerEncounter,
+  triggerTestLoot
+} from './game/engine';
 import { applyPassiveHealing } from './game/health';
 import { enterTown, leaveTown, processTownPurchase } from './game/town';
 
@@ -128,6 +134,22 @@ export async function activate(context: vscode.ExtensionContext) {
     }),
     vscode.commands.registerCommand('mergeMagic.resetSave', async () => {
       currentState = resetGameState();
+      await updateState(context);
+    }),
+    vscode.commands.registerCommand('mergeMagic.developer.dropLoot', async () => {
+      await triggerTestLoot(currentState, {
+        triggerLabel: 'Developer loot drop',
+        afterLog: () => updateState(context),
+        logDelayMs: 0
+      });
+      await updateState(context);
+    }),
+    vscode.commands.registerCommand('mergeMagic.developer.startEncounter', async () => {
+      await triggerEncounter(currentState, {
+        triggerLabel: 'Developer encounter',
+        afterLog: () => updateState(context),
+        logDelayMs: 0
+      });
       await updateState(context);
     })
   );

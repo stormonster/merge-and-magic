@@ -81,7 +81,9 @@ export function openLootChest(state: GameState): void {
       `${result.message}\nTrigger: ${pendingItem.triggerLabel}`,
       [
         { text: result.item.name, rarity: result.item.rarity },
-        ...(result.type === 'equipped' && result.replacedItem ? [{ text: result.replacedItem.name, rarity: result.replacedItem.rarity }] : [])
+        ...(result.type === 'equipped' && result.replacedItem
+          ? [{ text: result.replacedItem.name, rarity: result.replacedItem.rarity }]
+          : [])
       ]
     );
   }
@@ -115,7 +117,7 @@ export async function triggerTestLoot(state: GameState, options?: ActivityTrigge
   await addTimedLogEntry(
     state,
     'loot_chest',
-    `🎁 A loot chest appeared! Open it to reveal what's inside.\nTrigger: ${getTriggerLabel(options)}`,
+    `A loot chest appeared! Open it to reveal what's inside.\nTrigger: ${getTriggerLabel(options)}`,
     options
   );
 }
@@ -166,7 +168,7 @@ export async function triggerEncounter(state: GameState, options?: ActivityTrigg
   await addTimedLogEntry(
     state,
     'loot_chest',
-    `🎁 ${enemy.name} dropped a loot chest! Open it to reveal your reward.\nTrigger: ${getTriggerLabel(options)}`,
+    `${enemy.name} dropped a loot chest! Open it to reveal your reward.\nTrigger: ${getTriggerLabel(options)}`,
     options
   );
 }

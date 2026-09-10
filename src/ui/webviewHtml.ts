@@ -162,6 +162,8 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
   const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'styles', 'webview.css'));
   const assetBaseUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'assets'));
   const logoUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'assets', 'placeholder.png'));
+  const emptyLootChestUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'assets', 'ui', 'loot-chest-empty.png'));
+  const readyLootChestUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'assets', 'ui', 'loot-chest-ready.png'));
   const backgroundUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'assets', 'panel-background.png'));
 
   const slots = [
@@ -201,6 +203,7 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
   const townButtonLabel = state.town.inTown ? 'Leave town' : townCooldownMs > 0 ? `Town ${formatDuration(townCooldownMs)}` : 'Go to town';
   const townStatusLabel = state.town.inTown ? `Shopping · ${state.town.purchases} bought · HP ${state.player.hp}/${state.player.maxHp}` : townCooldownMs > 0 ? 'Restocking' : 'Adventure';
   const townButtonDisabled = !state.town.inTown && townCooldownMs > 0;
+  const pendingLootCount = state.lootChest.pending.length;
   const serializedState = JSON.stringify(state).replace(/</g, '\\u003c');
 
   const logHtml = state.log.slice(0, 10)
@@ -267,20 +270,19 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
       </div>
     </section>
 
-    <section class="town-panel">
-      <button class="town-button" data-action="town-toggle"${townButtonDisabled ? ' disabled' : ''}>${townButtonLabel}</button>
-      <div class="town-status" data-town-status>${townStatusLabel}</div>
-    </section>
-
-    <section class="loot-chest-panel">
-      <button class="loot-chest-button${state.lootChest.pending.length > 0 ? ' has-loot' : ''}" data-action="open-loot-chest" data-chest-count="${state.lootChest.pending.length}">
-        <span class="loot-chest-icon">🎁</span>
-        <span class="loot-chest-label">${state.lootChest.pending.length > 0 ? `Open chest (${state.lootChest.pending.length})` : 'Chest empty'}</span>
-      </button>
-    </section>
-
     <section class="equipment-grid" data-section="equipment">
       ${equipmentButtons.join('')}
+    </section>
+
+    <section class="adventure-actions">
+      <div class="town-panel">
+        <button class="town-button" data-action="town-toggle"${townButtonDisabled ? ' disabled' : ''}>${townButtonLabel}</button>
+        <div class="town-status" data-town-status>${townStatusLabel}</div>
+      </div>
+      <button class="loot-chest-button${pendingLootCount > 0 ? ' has-loot' : ''}" type="button" data-action="open-loot-chest" data-chest-count="${pendingLootCount}" aria-label="${pendingLootCount > 0 ? `Open treasure chest with ${pendingLootCount} item${pendingLootCount === 1 ? '' : 's'}` : 'Treasure chest is empty'}"${pendingLootCount > 0 ? '' : ' disabled'}>
+        <img class="loot-chest-icon" data-loot-chest-icon src="${pendingLootCount > 0 ? readyLootChestUri.toString() : emptyLootChestUri.toString()}" alt="" aria-hidden="true" />
+        <span class="loot-chest-label">${pendingLootCount > 0 ? `Open chest (${pendingLootCount})` : 'Chest empty'}</span>
+      </button>
     </section>
 
     <section class="log-panel">
@@ -295,6 +297,8 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
     const COMMIT_ENCOUNTER_COOLDOWN_MS = ${COMMIT_ENCOUNTER_COOLDOWN_MS};
     const TOWN_ENTRY_COOLDOWN_MS = ${TOWN_ENTRY_COOLDOWN_MS};
     const ASSET_BASE_URI = '${assetBaseUri.toString()}';
+    const LOOT_CHEST_EMPTY_URI = '${emptyLootChestUri.toString()}';
+    const LOOT_CHEST_READY_URI = '${readyLootChestUri.toString()}';
     const SLOT_ORDER = ['amulet', 'helmet', 'gloves', 'weapon', 'chest', 'offhand', 'ring1', 'boots', 'ring2'];
     const SLOT_LABELS = ${JSON.stringify(slotLabels)};
     let currentState = ${serializedState};
@@ -564,23 +568,27 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
     function renderLootChest() {
       const count = currentState.lootChest.pending.length;
       const button = document.querySelector('[data-action="open-loot-chest"]');
-      if (!button) {
+      const icon = document.querySelector('[data-loot-chest-icon]');
+      if (!(button instanceof HTMLButtonElement)) {
         return;
       }
+
       button.classList.toggle('has-loot', count > 0);
+      button.disabled = count === 0;
       button.dataset.chestCount = String(count);
+      button.setAttribute('aria-label', count > 0
+        ? 'Open treasure chest with ' + count + ' item' + (count === 1 ? '' : 's')
+        : 'Treasure chest is empty');
+
+      if (icon instanceof HTMLImageElement) {
+        icon.src = count > 0 ? LOOT_CHEST_READY_URI : LOOT_CHEST_EMPTY_URI;
+      }
+
       const label = button.querySelector('.loot-chest-label');
       if (label) {
         label.textContent = count > 0 ? 'Open chest (' + count + ')' : 'Chest empty';
       }
     }
-
-    document.querySelector('[data-action="open-loot-chest"]')?.addEventListener('click', () => {
-      if (currentState.lootChest.pending.length === 0) {
-        return;
-      }
-      vscode.postMessage({ type: 'openLootChest' });
-    });
 
     document.querySelector('[data-action="town-toggle"]')?.addEventListener('click', () => {
       if (!currentState.town.inTown) {
@@ -591,6 +599,13 @@ export function getWebviewContent(extensionUri: vscode.Uri, webview: vscode.Webv
         }
       }
       vscode.postMessage({ type: currentState.town.inTown ? 'leaveTown' : 'enterTown' });
+    });
+
+    document.querySelector('[data-action="open-loot-chest"]')?.addEventListener('click', () => {
+      if (currentState.lootChest.pending.length === 0) {
+        return;
+      }
+      vscode.postMessage({ type: 'openLootChest' });
     });
 
     document.addEventListener('visibilitychange', () => {
