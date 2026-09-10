@@ -1,0 +1,12 @@
+.github/**
+.venv/**
+.vscode/**
+node_modules/**
+src/**
+scripts/**
+assets/items/source-sheets/**
+*.vsix
+.gitignore
+PROJECT_PLAN.MD
+PROJECT_SPEC.MD
+tsconfig.json

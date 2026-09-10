@@ -7,7 +7,7 @@ import { initializeGitIntegration } from './git/gitIntegration';
 import { processActivityEvent } from './activity/processor';
 import { ActivityEventInput } from './activity/types';
 import { initializeFocusTracker } from './activity/focusTracker';
-import { resetGameState, toggleEquipmentSlotLock } from './game/engine';
+import { openLootChest, resetGameState, toggleEquipmentSlotLock } from './game/engine';
 import { applyPassiveHealing } from './game/health';
 import { enterTown, leaveTown, processTownPurchase } from './game/town';
 import { normalizeSelectedTitle, syncTitleUnlocks } from './game/titles';
@@ -16,6 +16,7 @@ import { syncAchievementUnlocks } from './game/achievements';
 let currentState: GameState;
 let sidebarProvider: SidebarViewProvider | undefined;
 let activityStatusItem: vscode.StatusBarItem;
+let lootChestOpening = false;
 let gitDebugOutput: vscode.OutputChannel | undefined;
 let unseenActivityUpdates = 0;
 let statusSuppressedUntil = 0;
@@ -123,6 +124,26 @@ async function handleWebviewMessage(message: unknown, context: vscode.ExtensionC
     case 'leaveTown':
       leaveTown(currentState);
       await updateState(context);
+      break;
+    case 'openLootChest':
+      if (lootChestOpening || currentState.lootChest.pending.length === 0) {
+        return;
+      }
+
+      lootChestOpening = true;
+      sidebarProvider?.startLootReveal(currentState.lootChest.pending.length);
+      try {
+        await openLootChest(currentState, {
+          onReveal: async (item, index, total) => {
+            sidebarProvider?.revealLootItem(item, index, total);
+          },
+          afterItem: () => updateState(context)
+        });
+      } finally {
+        lootChestOpening = false;
+        sidebarProvider?.finishLootReveal();
+        await updateState(context);
+      }
       break;
   }
 }

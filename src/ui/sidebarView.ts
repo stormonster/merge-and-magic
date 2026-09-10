@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { GameState } from '../game/types';
+import { GameState, Item } from '../game/types';
 import { getWebviewContent } from './webviewHtml';
 
 export class SidebarViewProvider implements vscode.WebviewViewProvider {
@@ -56,6 +56,18 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
 
     this.markViewSeen();
     this.renderCurrentState();
+  }
+
+  public startLootReveal(total: number) {
+    void this._view?.webview.postMessage({ type: 'lootRevealStart', total });
+  }
+
+  public revealLootItem(item: Item, index: number, total: number) {
+    void this._view?.webview.postMessage({ type: 'lootReveal', item, index, total });
+  }
+
+  public finishLootReveal() {
+    void this._view?.webview.postMessage({ type: 'lootRevealEnd' });
   }
 
   private renderCurrentState() {

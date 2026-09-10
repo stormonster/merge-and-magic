@@ -22,6 +22,13 @@ type ActivityTriggerOptions = {
   logDelayMs?: number;
 };
 
+type LootChestOpenOptions = {
+  onReveal?: (item: Item, index: number, total: number) => Promise<void>;
+  afterItem?: () => Promise<void>;
+  revealDurationMs?: number;
+  itemDelayMs?: number;
+};
+
 export function resetGameState(): GameState {
   return createInitialGameState();
 }
@@ -68,6 +75,54 @@ function getTriggerLabel(options?: ActivityTriggerOptions): string {
   return options?.triggerLabel || 'Manual trigger';
 }
 
+function queueLootDrop(state: GameState, item: Item, options?: ActivityTriggerOptions): void {
+  state.lootChest.pending.push({
+    id: crypto.randomUUID(),
+    item,
+    triggerLabel: getTriggerLabel(options),
+    createdAt: new Date().toISOString()
+  });
+}
+
+export async function openLootChest(state: GameState, options?: LootChestOpenOptions): Promise<void> {
+  const total = state.lootChest.pending.length;
+
+  for (let index = 0; index < total; index += 1) {
+    const pendingItem = state.lootChest.pending.shift();
+    if (!pendingItem) {
+      break;
+    }
+
+    if (options?.onReveal) {
+      await options.onReveal(pendingItem.item, index, total);
+    }
+    await delay(options?.revealDurationMs ?? 1100);
+
+    if (pendingItem.item.rarity === 'legendary' || pendingItem.item.rarity === 'mythic') {
+      recordLegendaryItem(state);
+    }
+    const result = handleLootDrop(state.player, pendingItem.item);
+    addLogEntry(
+      state,
+      result.type === 'equipped' ? 'loot_equipped' : 'loot_missed',
+      `${result.message}\nTrigger: ${pendingItem.triggerLabel}`,
+      [
+        { text: result.item.name, rarity: result.item.rarity },
+        ...(result.type === 'equipped' && result.replacedItem
+          ? [{ text: result.replacedItem.name, rarity: result.replacedItem.rarity }]
+          : [])
+      ]
+    );
+
+    if (options?.afterItem) {
+      await options.afterItem();
+    }
+    if (index < total - 1) {
+      await delay(options?.itemDelayMs ?? 250);
+    }
+  }
+}
+
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -92,19 +147,12 @@ export async function triggerTestLoot(state: GameState, options?: ActivityTrigge
   const rarity = selectItemRarity(Object.values(state.player.equipment).filter((slot) => slot.locked).length);
   const template = ITEM_TEMPLATES[randomInt(0, ITEM_TEMPLATES.length - 1)];
   const item = createItem(state.player.level, rarity, template);
-  if (item.rarity === 'legendary' || item.rarity === 'mythic') {
-    recordLegendaryItem(state);
-  }
-  const result = handleLootDrop(state.player, item);
+  queueLootDrop(state, item, options);
   await addTimedLogEntry(
     state,
-    result.type === 'equipped' ? 'loot_equipped' : 'loot_missed',
-    `${result.message}\nTrigger: ${getTriggerLabel(options)}`,
-    options,
-    [
-      { text: result.item.name, rarity: result.item.rarity },
-      ...(result.type === 'equipped' && result.replacedItem ? [{ text: result.replacedItem.name, rarity: result.replacedItem.rarity }] : [])
-    ]
+    'loot_chest',
+    `A loot chest appeared! Open it to reveal what's inside.\nTrigger: ${getTriggerLabel(options)}`,
+    options
   );
 }
 
@@ -160,18 +208,11 @@ export async function triggerEncounter(state: GameState, options?: ActivityTrigg
   const rarity = selectItemRarity(Object.values(state.player.equipment).filter((slot) => slot.locked).length);
   const template = ITEM_TEMPLATES[randomInt(0, ITEM_TEMPLATES.length - 1)];
   const item = createItem(state.player.level, rarity, template);
-  if (item.rarity === 'legendary' || item.rarity === 'mythic') {
-    recordLegendaryItem(state);
-  }
-  const lootResult = handleLootDrop(state.player, item);
+  queueLootDrop(state, item, options);
   await addTimedLogEntry(
     state,
-    lootResult.type === 'equipped' ? 'loot_equipped' : 'loot_missed',
-    `${lootResult.message}\nTrigger: ${getTriggerLabel(options)}`,
-    options,
-    [
-      { text: lootResult.item.name, rarity: lootResult.item.rarity },
-      ...(lootResult.type === 'equipped' && lootResult.replacedItem ? [{ text: lootResult.replacedItem.name, rarity: lootResult.replacedItem.rarity }] : [])
-    ]
+    'loot_chest',
+    `${enemy.name} dropped a loot chest! Open it to reveal your reward.\nTrigger: ${getTriggerLabel(options)}`,
+    options
   );
 }
