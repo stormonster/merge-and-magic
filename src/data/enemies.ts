@@ -46,3 +46,39 @@ export const ENEMIES: Enemy[] = [
     baseLootDropChance: 0.42
   }
 ];
+
+export const BOSSES: Enemy[] = [
+  {
+    id: 'build_breaker_colossus',
+    name: 'Build-Breaker Colossus',
+    level: 3,
+    hp: 30,
+    attack: 6,
+    defense: 3,
+    xpReward: 45,
+    goldReward: 15,
+    baseLootDropChance: 0.7
+  },
+  {
+    id: 'dependency_hydra',
+    name: 'Dependency Hydra',
+    level: 4,
+    hp: 38,
+    attack: 7,
+    defense: 4,
+    xpReward: 55,
+    goldReward: 18,
+    baseLootDropChance: 0.72
+  },
+  {
+    id: 'production_incident',
+    name: 'The Production Incident',
+    level: 5,
+    hp: 46,
+    attack: 9,
+    defense: 4,
+    xpReward: 70,
+    goldReward: 24,
+    baseLootDropChance: 0.75
+  }
+];

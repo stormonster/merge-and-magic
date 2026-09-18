@@ -92,7 +92,7 @@ export type Player = {
 export type GameLogEntry = {
   id: string;
   createdAt: string;
-  type: 'encounter' | 'loot_equipped' | 'loot_missed' | 'level_up' | 'system' | 'loot_chest';
+  type: 'encounter' | 'boss_encounter' | 'loot_equipped' | 'loot_missed' | 'level_up' | 'system' | 'loot_chest';
   message: string;
   highlights?: {
     text: string;

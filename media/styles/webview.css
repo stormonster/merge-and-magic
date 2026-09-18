@@ -1270,6 +1270,16 @@ body {
   color: #f7c64f;
 }
 
+.log-boss_encounter {
+  color: #ffd66b;
+  background: #24160f;
+  border-color: #d98b3a;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 214, 107, 0.16),
+    0 0 12px rgba(217, 139, 58, 0.18);
+  font-weight: 800;
+}
+
 .log-loot_equipped {
   color: #7bdc7d;
 }

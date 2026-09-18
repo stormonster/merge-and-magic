@@ -1,6 +1,6 @@
 import { ActivityEventType } from './types';
 
-export type ActivityReward = 'encounter' | 'loot' | 'none';
+export type ActivityReward = 'encounter' | 'boss_encounter' | 'loot' | 'none';
 
 const ACTIVITY_REWARDS: Record<ActivityEventType, ActivityReward> = {
   manual_encounter: 'encounter',
@@ -16,7 +16,7 @@ const ACTIVITY_REWARDS: Record<ActivityEventType, ActivityReward> = {
   tests_passed: 'none',
   tests_failed: 'none',
   merge_completed: 'none',
-  focus_session: 'none'
+  focus_session: 'boss_encounter'
 };
 
 export function getActivityReward(type: ActivityEventType): ActivityReward {

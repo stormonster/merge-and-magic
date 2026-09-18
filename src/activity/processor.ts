@@ -1,4 +1,4 @@
-import { triggerEncounter, triggerTestLoot } from '../game/engine';
+import { triggerBossEncounter, triggerEncounter, triggerTestLoot } from '../game/engine';
 import { addLogEntry, upsertLogEntryByPrefix } from '../game/state';
 import { GameState } from '../game/types';
 import { applyPassiveHealing, healToFull, isHealing } from '../game/health';
@@ -146,6 +146,8 @@ export async function processActivityEvent(
 
   if (reward === 'encounter') {
     await triggerEncounter(state, activityOptions);
+  } else if (reward === 'boss_encounter') {
+    await triggerBossEncounter(state, activityOptions);
   } else if (reward === 'loot') {
     await triggerTestLoot(state, activityOptions);
   }

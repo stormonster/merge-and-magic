@@ -28,6 +28,7 @@ It is intentionally lightweight: no build dashboards, no productivity scoring, n
 
 - Idle RPG progression driven by editor and Git activity.
 - Automatic encounters with enemies, XP, gold, and loot drops.
+- Boss encounters after sustained coding sessions, with richer rewards and better loot odds.
 - A 3x3 equipment grid with weapons, armor, jewelry, boots, gloves, and shield.
 - Lockable equipment slots so good items are protected from replacement.
 - Greed bonus for keeping slots unlocked and accepting risk.
@@ -42,7 +43,7 @@ It is intentionally lightweight: no build dashboards, no productivity scoring, n
 
 Merge & Magic listens for normal development activity and turns some of it into RPG events.
 
-Editor activity builds toward a focus session. After 5 minutes of observed activity, the session completes.
+Editor activity builds toward a focus session. After 5 minutes of observed activity, the session culminates in a boss encounter. Stored focus begins to decay after 1 hour without editor activity.
 
 Git activity can trigger encounters, including commits, branch switches, pulls, pushes, merges, conflicts, and stashes. Commands are collected into a burst that resolves 30 seconds after the latest Git activity, followed by a 2-minute encounter cooldown.
 
@@ -52,14 +53,14 @@ When an encounter starts, your character fights a random enemy. Victory grants X
 
 Merge & Magic rewards activity in a few different ways:
 
-- **Editor activity** builds focus progress. After 5 minutes of observed editor activity, a focus session completes and is logged.
+- **Editor activity** builds focus progress. After 5 minutes of observed editor activity, a boss encounter begins with larger XP and gold rewards, at least an 80% loot chance, and improved rarity odds.
 - **Git activity** can trigger encounters. This includes commits, branch switches, pulls, pushes, merges, conflicts, and stashes.
 - **Winning encounters** grants XP and gold, and may also drop loot.
 - **Town visits** can buy and equip items with gold while also healing your character.
 - **Hero identity** starts with a name and title prompt, and can later be edited from the settings drawer.
 - **Achievements** track long-term goals and can reward titles when unlocked.
 
-Some activity is intentionally throttled. Git activity is grouped into resettable 30-second bursts, with one encounter and a 2-minute cooldown per burst. Town entry has a 5-minute cooldown. While you are in town or recovering from defeat, most activity rewards pause.
+Some activity is intentionally throttled. Stored focus starts decaying after 1 hour without editor activity. Git activity is grouped into resettable 30-second bursts, with one encounter and a 2-minute cooldown per burst. Town entry has a 5-minute cooldown. While you are in town or recovering from defeat, most activity rewards pause.
 
 ## Loot And Locks
 
