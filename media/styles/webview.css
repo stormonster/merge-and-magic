@@ -1270,6 +1270,14 @@ body {
   color: #f7c64f;
 }
 
+.log-elite_encounter {
+  color: #72d6d0;
+  background: #10201f;
+  border-color: #3f9f99;
+  box-shadow: inset 0 0 0 1px rgba(114, 214, 208, 0.12);
+  font-weight: 700;
+}
+
 .log-boss_encounter {
   color: #ffd66b;
   background: #24160f;
@@ -1278,6 +1286,16 @@ body {
     inset 0 0 0 1px rgba(255, 214, 107, 0.16),
     0 0 12px rgba(217, 139, 58, 0.18);
   font-weight: 800;
+}
+
+.log-raid_encounter {
+  color: #ff8f70;
+  background: #291013;
+  border-color: #dc4f45;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 143, 112, 0.2),
+    0 0 16px rgba(220, 79, 69, 0.24);
+  font-weight: 900;
 }
 
 .log-loot_equipped {

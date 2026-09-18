@@ -8,12 +8,16 @@ All notable changes to Merge & Magic will be documented in this file.
 
 - Added boss encounters as the reward for completing 5 minutes of observed editor activity.
 - Added boss-specific enemies, presentation, larger XP and gold rewards, at least an 80% loot chance, and improved item rarity odds.
+- Added normal, elite, boss, and raid encounter tiers with distinct enemies, presentation, and escalating rewards.
+- Added elite encounters for completed rebases and Git bursts containing at least 3 activities.
+- Added boss encounters for resolved merge conflicts and raid encounters for release-branch pushes.
 
 ### Changed
 
 - Group Git commands into resettable 30-second activity bursts so related actions produce one representative encounter.
 - Reduced the Git encounter cooldown from 5 minutes to 2 minutes.
 - Focus progress now begins decaying after 1 hour without editor activity.
+- Elite, boss, and raid Git encounters can supersede an active normal encounter cooldown.
 
 ## [0.3.0] - 2026-09-10
 

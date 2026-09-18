@@ -25,6 +25,25 @@ test('active cooldown returns its remaining time without moving the cooldown', (
   assert.equal(state.cooldowns.lastEncounterAt, new Date(now - 60_000).toISOString());
 });
 
+test('stronger encounter tiers bypass an active normal cooldown', () => {
+  const now = Date.parse('2026-09-18T12:00:00.000Z');
+
+  for (const activity of [
+    { type: 'git_rebase' as const },
+    { type: 'git_conflict_resolved' as const },
+    { type: 'git_push' as const, metadata: { releasePush: true } }
+  ]) {
+    const state = createInitialGameState();
+    state.cooldowns.lastEncounterAt = new Date(now - 30_000).toISOString();
+
+    assert.deepEqual(applyGitRewardGate(state, activity, now), {
+      accepted: true,
+      reward: 'encounter'
+    });
+    assert.equal(state.cooldowns.lastEncounterAt, new Date(now).toISOString());
+  }
+});
+
 test('town and recovery return explicit skip reasons without consuming cooldown', () => {
   const townState = createInitialGameState();
   townState.town.inTown = true;

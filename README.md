@@ -28,7 +28,7 @@ It is intentionally lightweight: no build dashboards, no productivity scoring, n
 
 - Idle RPG progression driven by editor and Git activity.
 - Automatic encounters with enemies, XP, gold, and loot drops.
-- Boss encounters after sustained coding sessions, with richer rewards and better loot odds.
+- Normal, elite, boss, and raid encounters with escalating enemies and rewards.
 - A 3x3 equipment grid with weapons, armor, jewelry, boots, gloves, and shield.
 - Lockable equipment slots so good items are protected from replacement.
 - Greed bonus for keeping slots unlocked and accepting risk.
@@ -45,7 +45,7 @@ Merge & Magic listens for normal development activity and turns some of it into 
 
 Editor activity builds toward a focus session. After 5 minutes of observed activity, the session culminates in a boss encounter. Stored focus begins to decay after 1 hour without editor activity.
 
-Git activity can trigger encounters, including commits, branch switches, pulls, pushes, merges, conflicts, and stashes. Commands are collected into a burst that resolves 30 seconds after the latest Git activity, followed by a 2-minute encounter cooldown.
+Git activity can trigger encounters, including commits, branch switches, pulls, pushes, merges, conflicts, and stashes. Commands are collected into a burst that resolves 30 seconds after the latest Git activity, followed by a 2-minute encounter cooldown. Rebases and bursts of at least 3 activities become elite encounters, resolved merge conflicts become bosses, and pushes from release branches become raids.
 
 When an encounter starts, your character fights a random enemy. Victory grants XP and gold, and may drop an item. Defeat deals damage. If your HP gets too low, recovery starts and activity rewards pause until you heal.
 
@@ -55,6 +55,9 @@ Merge & Magic rewards activity in a few different ways:
 
 - **Editor activity** builds focus progress. After 5 minutes of observed editor activity, a boss encounter begins with larger XP and gold rewards, at least an 80% loot chance, and improved rarity odds.
 - **Git activity** can trigger encounters. This includes commits, branch switches, pulls, pushes, merges, conflicts, and stashes.
+- **Elite encounters** reward completed rebases and Git bursts containing at least 3 activities.
+- **Boss encounters** reward completed focus sessions and resolved merge conflicts.
+- **Raid encounters** reward release-branch pushes with guaranteed loot and exceptional rarity odds.
 - **Winning encounters** grants XP and gold, and may also drop loot.
 - **Town visits** can buy and equip items with gold while also healing your character.
 - **Hero identity** starts with a name and title prompt, and can later be edited from the settings drawer.

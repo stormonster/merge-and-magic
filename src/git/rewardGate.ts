@@ -1,5 +1,6 @@
 import { getActivityReward, ActivityReward } from '../activity/rewards';
 import { ActivityEventType } from '../activity/types';
+import { getEncounterTier } from '../activity/encounterTier';
 import { GameState } from '../game/types';
 
 export const GIT_ENCOUNTER_COOLDOWN_MS = 2 * 60 * 1000;
@@ -7,6 +8,7 @@ export const GIT_ENCOUNTER_COOLDOWN_MS = 2 * 60 * 1000;
 type GitRewardActivity = {
   type: ActivityEventType;
   commitHash?: string | null;
+  metadata?: Record<string, unknown>;
 };
 
 export type GitRewardSkip =
@@ -43,7 +45,8 @@ export function applyGitRewardGate(
   const lastEncounterAt = state.cooldowns.lastEncounterAt
     ? Date.parse(state.cooldowns.lastEncounterAt)
     : 0;
-  if (!isHealing && now - lastEncounterAt < GIT_ENCOUNTER_COOLDOWN_MS) {
+  const encounterTier = getEncounterTier(activity.type, activity.metadata);
+  if (!isHealing && encounterTier === 'normal' && now - lastEncounterAt < GIT_ENCOUNTER_COOLDOWN_MS) {
     return {
       accepted: false,
       reason: 'cooldown',

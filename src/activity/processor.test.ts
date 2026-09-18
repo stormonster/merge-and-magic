@@ -28,7 +28,7 @@ for (const type of GIT_ACTIVITY_TYPES) {
   test(`${type} resolves a game reward`, async () => {
     const state = createInitialGameState();
 
-    const encounterCountBefore = state.log.filter((entry) => entry.message.startsWith('⚔ Encounter:')).length;
+    const encounterCountBefore = state.progress.encounters;
 
     await processActivityEvent(state, {
       type,
@@ -41,7 +41,7 @@ for (const type of GIT_ACTIVITY_TYPES) {
       }
     });
 
-    const encounterCountAfter = state.log.filter((entry) => entry.message.startsWith('⚔ Encounter:')).length;
+    const encounterCountAfter = state.progress.encounters;
 
     assert.ok(encounterCountAfter > encounterCountBefore, `${type} should trigger an encounter`);
   });

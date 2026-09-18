@@ -47,6 +47,31 @@ export const ENEMIES: Enemy[] = [
   }
 ];
 
+export const ELITES: Enemy[] = [
+  {
+    id: 'rebase_revenant',
+    name: 'Rebase Revenant',
+    level: 3,
+    hp: 28,
+    attack: 6,
+    defense: 3,
+    xpReward: 36,
+    goldReward: 12,
+    baseLootDropChance: 0.55
+  },
+  {
+    id: 'branchstorm_sentinel',
+    name: 'Branchstorm Sentinel',
+    level: 4,
+    hp: 36,
+    attack: 8,
+    defense: 3,
+    xpReward: 44,
+    goldReward: 15,
+    baseLootDropChance: 0.58
+  }
+];
+
 export const BOSSES: Enemy[] = [
   {
     id: 'build_breaker_colossus',
@@ -80,5 +105,30 @@ export const BOSSES: Enemy[] = [
     xpReward: 70,
     goldReward: 24,
     baseLootDropChance: 0.75
+  }
+];
+
+export const RAID_BOSSES: Enemy[] = [
+  {
+    id: 'release_dragon',
+    name: 'The Release Dragon',
+    level: 7,
+    hp: 64,
+    attack: 12,
+    defense: 6,
+    xpReward: 120,
+    goldReward: 45,
+    baseLootDropChance: 1
+  },
+  {
+    id: 'deployment_titan',
+    name: 'Deployment Titan',
+    level: 8,
+    hp: 72,
+    attack: 13,
+    defense: 7,
+    xpReward: 140,
+    goldReward: 55,
+    baseLootDropChance: 1
   }
 ];

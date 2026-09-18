@@ -1,4 +1,4 @@
-import { triggerBossEncounter, triggerEncounter, triggerTestLoot } from '../game/engine';
+import { triggerTierEncounter, triggerTestLoot } from '../game/engine';
 import { addLogEntry, upsertLogEntryByPrefix } from '../game/state';
 import { GameState } from '../game/types';
 import { applyPassiveHealing, healToFull, isHealing } from '../game/health';
@@ -12,6 +12,7 @@ import {
 } from '../game/achievements';
 import { ActivityEvent, ActivityEventInput } from './types';
 import { getActivityReward } from './rewards';
+import { getEncounterTier } from './encounterTier';
 
 const ACTIVITY_LOG_LIMIT = 100;
 const DEFAULT_LOG_DELAY_MS = 1000;
@@ -145,10 +146,8 @@ export async function processActivityEvent(
       break;
   }
 
-  if (reward === 'encounter') {
-    await triggerEncounter(state, activityOptions);
-  } else if (reward === 'boss_encounter') {
-    await triggerBossEncounter(state, activityOptions);
+  if (reward === 'encounter' || reward === 'boss_encounter') {
+    await triggerTierEncounter(state, getEncounterTier(event.type, event.metadata), activityOptions);
   } else if (reward === 'loot') {
     await triggerTestLoot(state, activityOptions);
   }
