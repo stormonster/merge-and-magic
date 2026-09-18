@@ -3,13 +3,12 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as util from 'util';
 import * as vscode from 'vscode';
-import { getActivityReward } from '../activity/rewards';
 import { ActivityEventInput, ActivityEventType } from '../activity/types';
 import { recordReleasePush } from '../game/achievements';
 import { GameState } from '../game/types';
+import { applyGitRewardGate, GitRewardSkip } from './rewardGate';
 
 const execFile = util.promisify(cp.execFile);
-const GIT_ENCOUNTER_COOLDOWN_MS = 5 * 60 * 1000;
 const INSPECT_DEBOUNCE_MS = 400;
 const FALLBACK_POLL_MS = 10 * 1000;
 
@@ -314,46 +313,11 @@ function getActivityInput(activity: GitActivity): ActivityEventInput {
   };
 }
 
-async function shouldSkipForCooldown(
-  state: GameState,
-  activity: GitActivity,
-  onActivitySkipped?: (activity: GitActivity, remainingMs: number) => Promise<void>
-): Promise<boolean> {
-  const now = Date.now();
-  const last = state.cooldowns.lastEncounterAt ? Date.parse(state.cooldowns.lastEncounterAt) : 0;
-  const isHealing = state.cooldowns.healingStartedAt !== null && state.player.hp < state.player.maxHp;
-
-  if (getActivityReward(activity.type) === 'none') {
-    return true;
-  }
-
-  if (state.town.inTown) {
-    return true;
-  }
-
-  if (isHealing && activity.type !== 'git_commit') {
-    return true;
-  }
-
-  if (activity.type === 'git_commit' && activity.commitHash) {
-    state.cooldowns.lastCommitHash = activity.commitHash;
-  }
-
-  if (!isHealing && now - last < GIT_ENCOUNTER_COOLDOWN_MS) {
-    const remainingMs = GIT_ENCOUNTER_COOLDOWN_MS - (now - last);
-    await onActivitySkipped?.(activity, remainingMs);
-    return true;
-  }
-
-  state.cooldowns.lastEncounterAt = new Date().toISOString();
-  return false;
-}
-
 export function initializeGitIntegration(
   context: vscode.ExtensionContext,
   getState: () => GameState,
   onGitActivity: (activity: ActivityEventInput) => Promise<void>,
-  onActivitySkipped?: (activity: GitActivity, remainingMs: number) => Promise<void>,
+  onActivitySkipped?: (activity: GitActivity, skip: GitRewardSkip) => Promise<void>,
   debugLog?: (message: string) => void
 ): void {
   const debug = (message: string) => {
@@ -430,8 +394,10 @@ export function initializeGitIntegration(
           return;
         }
 
-        if (await shouldSkipForCooldown(state, activity, onActivitySkipped)) {
-          debug(`activity skipped for ${rootPath}: cooldown or town/healing guard`);
+        const rewardGate = applyGitRewardGate(state, activity);
+        if (!rewardGate.accepted) {
+          await onActivitySkipped?.(activity, rewardGate);
+          debug(`activity skipped for ${rootPath}: ${rewardGate.reason}`);
           return;
         }
 

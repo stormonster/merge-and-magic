@@ -12,6 +12,7 @@ import { applyPassiveHealing } from './game/health';
 import { enterTown, leaveTown, processTownPurchase } from './game/town';
 import { normalizeSelectedTitle, syncTitleUnlocks } from './game/titles';
 import { syncAchievementUnlocks } from './game/achievements';
+import { GitRewardSkip } from './git/rewardGate';
 
 let currentState: GameState;
 let sidebarProvider: SidebarViewProvider | undefined;
@@ -20,7 +21,7 @@ let lootChestOpening = false;
 let gitDebugOutput: vscode.OutputChannel | undefined;
 let unseenActivityUpdates = 0;
 let statusSuppressedUntil = 0;
-const GIT_COOLDOWN_LOG_PREFIX = 'Git activity detected.\nEncounter cooldown active:';
+const GIT_SKIP_LOG_PREFIX = 'Git activity detected.\n';
 
 function sanitizePlayerName(value: string): string {
   return value.trim().replace(/\s+/g, ' ').slice(0, 24);
@@ -62,9 +63,16 @@ function formatDuration(ms: number): string {
   return `${minutes}m ${seconds}s`;
 }
 
-function upsertGitCooldownLog(state: GameState, label: string, remainingMs: number) {
-  const message = `${GIT_COOLDOWN_LOG_PREFIX} ${formatDuration(remainingMs)} remaining.\nLast trigger: ${label}.`;
-  const existingIndex = state.log.findIndex((entry) => entry.message.startsWith(GIT_COOLDOWN_LOG_PREFIX));
+function upsertGitSkipLog(state: GameState, label: string, skip: GitRewardSkip) {
+  const reason = skip.reason === 'cooldown'
+    ? `Encounter cooldown active: ${formatDuration(skip.remainingMs)} remaining.`
+    : skip.reason === 'town'
+      ? 'No reward: adventuring is paused while you are in town.'
+      : skip.reason === 'healing'
+        ? 'No reward: recovery is active. A commit will restore you.'
+        : 'No reward is configured for this activity.';
+  const message = `${GIT_SKIP_LOG_PREFIX}${reason}\nLast trigger: ${label}.`;
+  const existingIndex = state.log.findIndex((entry) => entry.message.startsWith(GIT_SKIP_LOG_PREFIX));
   const existing = state.log[existingIndex];
   if (existing) {
     existing.createdAt = new Date().toISOString();
@@ -200,8 +208,8 @@ export async function activate(context: vscode.ExtensionContext) {
       );
       await updateState(context);
     },
-    async (activity, remainingMs) => {
-      upsertGitCooldownLog(currentState, activity.label, remainingMs);
+    async (activity, skip) => {
+      upsertGitSkipLog(currentState, activity.label, skip);
       await updateState(context);
     },
     (message) => {
