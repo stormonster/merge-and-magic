@@ -3,33 +3,20 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as util from 'util';
 import * as vscode from 'vscode';
-import { ActivityEventInput, ActivityEventType } from '../activity/types';
+import { ActivityEventInput } from '../activity/types';
 import { recordReleasePush } from '../game/achievements';
 import { GameState } from '../game/types';
+import {
+  classifyHeadChange,
+  classifySnapshotTransition,
+  GitActivity,
+  GitSnapshot
+} from './activityClassifier';
 import { applyGitRewardGate, GitRewardSkip } from './rewardGate';
 
 const execFile = util.promisify(cp.execFile);
 const INSPECT_DEBOUNCE_MS = 400;
 const FALLBACK_POLL_MS = 10 * 1000;
-
-type GitSnapshot = {
-  branch: string | null;
-  head: string | null;
-  remoteHead: string | null;
-  mergeInProgress: boolean;
-  rebaseInProgress: boolean;
-  hasConflicts: boolean;
-  stashHash: string | null;
-  ahead: number | null;
-  behind: number | null;
-};
-
-type GitActivity = {
-  type: ActivityEventType;
-  label: string;
-  metadata?: Record<string, unknown>;
-  commitHash?: string | null;
-};
 
 type WatchState = {
   repo: any | null;
@@ -186,112 +173,23 @@ async function isMergeCommit(rootPath: string, commitHash: string | null): Promi
   return parents.trim().split(/\s+/).length > 2;
 }
 
-async function classifyHeadChange(rootPath: string, snapshot: GitSnapshot): Promise<GitActivity> {
+async function classifyChangedHead(rootPath: string, snapshot: GitSnapshot): Promise<GitActivity | null> {
   const reflogSubject = await getReflogSubject(rootPath);
-  const normalized = reflogSubject.toLowerCase();
   const commitCreatedAt = await getCommitTimestamp(rootPath, snapshot.head);
   const commitSubject = await getCommitSubject(rootPath, snapshot.head);
-
-  if (normalized.includes('rebase')) {
-    return {
-      type: 'git_rebase',
-      label: 'Git rebase',
-      commitHash: snapshot.head,
-      metadata: { reflog: reflogSubject }
-    };
-  }
-
-  if (normalized.startsWith('pull')) {
-    return {
-      type: 'git_pull',
-      label: 'Git pull',
-      commitHash: snapshot.head,
-      metadata: { reflog: reflogSubject }
-    };
-  }
-
-  if (normalized.startsWith('merge') || (await isMergeCommit(rootPath, snapshot.head))) {
-    return {
-      type: 'git_merge',
-      label: 'Git merge',
-      commitHash: snapshot.head,
-      metadata: { reflog: reflogSubject }
-    };
-  }
-
-  return {
-    type: 'git_commit',
-    label: 'Git commit',
-    commitHash: snapshot.head,
-    metadata: { commitHash: snapshot.head, commitCreatedAt, commitSubject }
-  };
+  return classifyHeadChange(snapshot, {
+    reflogSubject,
+    commitCreatedAt,
+    commitSubject,
+    isMergeCommit: await isMergeCommit(rootPath, snapshot.head)
+  });
 }
 
 async function classifyGitActivity(rootPath: string, previous: GitSnapshot, snapshot: GitSnapshot): Promise<GitActivity | null> {
-  if (!previous.hasConflicts && snapshot.hasConflicts) {
-    return {
-      type: 'git_conflict',
-      label: 'Git conflict',
-      commitHash: snapshot.head
-    };
-  }
-
-  if (previous.stashHash !== snapshot.stashHash) {
-    return {
-      type: 'git_stash',
-      label: 'Git stash',
-      commitHash: snapshot.head
-    };
-  }
-
-  if (
-    previous.head === snapshot.head &&
-    previous.remoteHead !== null &&
-    snapshot.remoteHead !== null &&
-    previous.remoteHead !== snapshot.remoteHead &&
-    snapshot.remoteHead === snapshot.head
-  ) {
-    return {
-      type: 'git_push',
-      label: 'Git push',
-      commitHash: snapshot.head,
-      metadata: {
-        previousRemoteHead: previous.remoteHead,
-        remoteHead: snapshot.remoteHead,
-        branchName: snapshot.branch
-      }
-    };
-  }
-
-  if (previous.mergeInProgress && !snapshot.mergeInProgress && previous.head !== snapshot.head) {
-    return {
-      type: 'git_merge',
-      label: 'Git merge',
-      commitHash: snapshot.head
-    };
-  }
-
-  if (previous.rebaseInProgress !== snapshot.rebaseInProgress) {
-    return {
-      type: 'git_rebase',
-      label: 'Git rebase',
-      commitHash: snapshot.head
-    };
-  }
-
-  if (previous.branch !== snapshot.branch) {
-    return {
-      type: 'git_branch_switch',
-      label: 'Git branch switch',
-      commitHash: snapshot.head
-    };
-  }
-
-  if (previous.head !== snapshot.head) {
-    return classifyHeadChange(rootPath, snapshot);
-  }
-
-  return null;
+  const transition = classifySnapshotTransition(previous, snapshot);
+  return transition === 'head_change'
+    ? classifyChangedHead(rootPath, snapshot)
+    : transition;
 }
 
 function isReleaseBranchPush(activity: GitActivity): boolean {
