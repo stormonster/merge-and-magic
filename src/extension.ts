@@ -7,6 +7,7 @@ import { initializeGitIntegration } from './git/gitIntegration';
 import { processActivityEvent } from './activity/processor';
 import { ActivityEventInput } from './activity/types';
 import { initializeFocusTracker } from './activity/focusTracker';
+import { applyFocusDecay } from './activity/focusProgress';
 import { openLootChest, resetGameState, toggleEquipmentSlotLock } from './game/engine';
 import { applyPassiveHealing } from './game/health';
 import { enterTown, leaveTown, processTownPurchase } from './game/town';
@@ -159,6 +160,7 @@ async function handleWebviewMessage(message: unknown, context: vscode.ExtensionC
 export async function activate(context: vscode.ExtensionContext) {
   console.log('Merge & Magic activating');
   currentState = await loadGameState(context);
+  applyFocusDecay(currentState.focus);
   syncAchievementUnlocks(currentState);
   syncTitleUnlocks(currentState);
   const initialHealing = applyPassiveHealing(currentState);

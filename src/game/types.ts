@@ -107,6 +107,12 @@ export type PendingLootItem = {
   createdAt: string;
 };
 
+export type FocusProgress = {
+  activeMs: number;
+  lastActivityAt: string | null;
+  decayAppliedAt: string | null;
+};
+
 export type GameState = {
   version: number;
   player: Player;
@@ -138,9 +144,7 @@ export type GameState = {
     midnightCommits: number;
     maxGreedWins: number;
   };
-  focus: {
-    activeMs: number;
-  };
+  focus: FocusProgress;
   cooldowns: {
     lastEncounterAt: string | null;
     lastCommitHash: string | null;

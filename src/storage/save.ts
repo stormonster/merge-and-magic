@@ -21,7 +21,7 @@ export async function loadGameState(context: vscode.ExtensionContext): Promise<G
 
   return {
     ...saved,
-    version: Math.max(saved.version || 0, 3),
+    version: Math.max(saved.version || 0, 4),
     player: {
       ...saved.player,
       name: saved.player.name || '',
@@ -38,8 +38,10 @@ export async function loadGameState(context: vscode.ExtensionContext): Promise<G
       ...createInitialAchievementProgress(),
       ...(saved.progress || {})
     },
-    focus: saved.focus || {
-      activeMs: 0
+    focus: {
+      activeMs: saved.focus?.activeMs || 0,
+      lastActivityAt: saved.focus?.lastActivityAt || null,
+      decayAppliedAt: saved.focus?.decayAppliedAt || null
     },
     cooldowns: {
       ...saved.cooldowns,
