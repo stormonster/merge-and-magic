@@ -12,6 +12,7 @@ const ACTIVITY_REWARDS: Record<ActivityEventType, ActivityReward> = {
   git_merge: 'encounter',
   git_rebase: 'encounter',
   git_conflict: 'encounter',
+  git_conflict_resolved: 'encounter',
   git_stash: 'encounter',
   tests_passed: 'none',
   tests_failed: 'none',

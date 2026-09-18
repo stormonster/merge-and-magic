@@ -3,6 +3,7 @@ import { GitActivity } from './activityClassifier';
 export const GIT_ACTIVITY_WINDOW_MS = 30 * 1000;
 
 const ACTIVITY_PRIORITY: Record<GitActivity['type'], number> = {
+  git_conflict_resolved: 90,
   git_conflict: 80,
   git_merge: 70,
   git_rebase: 70,

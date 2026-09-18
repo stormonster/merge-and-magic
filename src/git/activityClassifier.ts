@@ -89,6 +89,14 @@ export function classifySnapshotTransition(
     };
   }
 
+  if (previous.hasConflicts && !snapshot.hasConflicts) {
+    return {
+      type: 'git_conflict_resolved',
+      label: 'Git conflict resolved',
+      commitHash: snapshot.head
+    };
+  }
+
   if (previous.stashHash !== snapshot.stashHash) {
     return {
       type: 'git_stash',

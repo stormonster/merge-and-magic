@@ -233,12 +233,12 @@ export function initializeGitIntegration(
       const releasePush = batch.activities.find(isReleaseBranchPush);
       if (releasePush) {
         recordReleasePush(getState());
-        if (batch.activity.type === 'git_push') {
-          batch.activity.metadata = {
-            ...(batch.activity.metadata || {}),
-            releasePushCounted: true
-          };
-        }
+        batch.activity.metadata = {
+          ...(batch.activity.metadata || {}),
+          releasePush: true,
+          releasePushCounted: true,
+          releaseBranchName: releasePush.metadata?.branchName
+        };
         debug(`release push counted for ${rootPath} on branch ${String(releasePush.metadata?.branchName || 'n/a')}`);
       }
 

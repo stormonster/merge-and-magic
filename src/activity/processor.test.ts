@@ -14,6 +14,7 @@ const GIT_ACTIVITY_TYPES: ActivityEventType[] = [
   'git_merge',
   'git_rebase',
   'git_conflict',
+  'git_conflict_resolved',
   'git_stash'
 ];
 

@@ -82,6 +82,7 @@ export async function processActivityEvent(
     case 'git_merge':
     case 'git_rebase':
     case 'git_conflict':
+    case 'git_conflict_resolved':
     case 'git_stash':
     case 'git_branch_switch':
       if (event.type === 'git_commit') {

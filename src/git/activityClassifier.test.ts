@@ -69,6 +69,15 @@ test('conflict detection takes precedence over other snapshot changes', () => {
   assert.equal(result && result !== 'head_change' ? result.type : null, 'git_conflict');
 });
 
+test('conflict resolution is classified separately from conflict detection', () => {
+  const result = classifySnapshotTransition(
+    snapshot({ hasConflicts: true }),
+    snapshot({ hasConflicts: false, head: 'head-2' })
+  );
+
+  assert.equal(result && result !== 'head_change' ? result.type : null, 'git_conflict_resolved');
+});
+
 test('stash changes and completed merges are classified', () => {
   const stash = classifySnapshotTransition(
     snapshot({ stashHash: null }),
