@@ -3,6 +3,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as util from 'util';
 import * as vscode from 'vscode';
+import { getActivityReward } from '../activity/rewards';
 import { ActivityEventInput, ActivityEventType } from '../activity/types';
 import { recordReleasePush } from '../game/achievements';
 import { GameState } from '../game/types';
@@ -321,6 +322,10 @@ async function shouldSkipForCooldown(
   const now = Date.now();
   const last = state.cooldowns.lastEncounterAt ? Date.parse(state.cooldowns.lastEncounterAt) : 0;
   const isHealing = state.cooldowns.healingStartedAt !== null && state.player.hp < state.player.maxHp;
+
+  if (getActivityReward(activity.type) === 'none') {
+    return true;
+  }
 
   if (state.town.inTown) {
     return true;

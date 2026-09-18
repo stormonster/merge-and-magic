@@ -69,6 +69,7 @@
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./tsconfig.json",
+    "test": "npm run compile && node --test out/**/*.test.js",
     "slice:items": "node scripts/slice-item-sheets.js",
     "watch": "tsc -watch -p ./tsconfig.json"
   },
