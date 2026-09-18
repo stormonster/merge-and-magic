@@ -3,33 +3,21 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as util from 'util';
 import * as vscode from 'vscode';
-import { ActivityEventInput, ActivityEventType } from '../activity/types';
+import { ActivityEventInput } from '../activity/types';
 import { recordReleasePush } from '../game/achievements';
 import { GameState } from '../game/types';
+import {
+  classifyHeadChange,
+  classifySnapshotTransition,
+  GitActivity,
+  GitSnapshot
+} from './activityClassifier';
+import { GitActivityAggregator, GitActivityBatch } from './activityAggregator';
+import { applyGitRewardGate, GitRewardSkip } from './rewardGate';
 
 const execFile = util.promisify(cp.execFile);
-const GIT_ENCOUNTER_COOLDOWN_MS = 5 * 60 * 1000;
 const INSPECT_DEBOUNCE_MS = 400;
 const FALLBACK_POLL_MS = 10 * 1000;
-
-type GitSnapshot = {
-  branch: string | null;
-  head: string | null;
-  remoteHead: string | null;
-  mergeInProgress: boolean;
-  rebaseInProgress: boolean;
-  hasConflicts: boolean;
-  stashHash: string | null;
-  ahead: number | null;
-  behind: number | null;
-};
-
-type GitActivity = {
-  type: ActivityEventType;
-  label: string;
-  metadata?: Record<string, unknown>;
-  commitHash?: string | null;
-};
 
 type WatchState = {
   repo: any | null;
@@ -186,112 +174,23 @@ async function isMergeCommit(rootPath: string, commitHash: string | null): Promi
   return parents.trim().split(/\s+/).length > 2;
 }
 
-async function classifyHeadChange(rootPath: string, snapshot: GitSnapshot): Promise<GitActivity> {
+async function classifyChangedHead(rootPath: string, snapshot: GitSnapshot): Promise<GitActivity | null> {
   const reflogSubject = await getReflogSubject(rootPath);
-  const normalized = reflogSubject.toLowerCase();
   const commitCreatedAt = await getCommitTimestamp(rootPath, snapshot.head);
   const commitSubject = await getCommitSubject(rootPath, snapshot.head);
-
-  if (normalized.includes('rebase')) {
-    return {
-      type: 'git_rebase',
-      label: 'Git rebase',
-      commitHash: snapshot.head,
-      metadata: { reflog: reflogSubject }
-    };
-  }
-
-  if (normalized.startsWith('pull')) {
-    return {
-      type: 'git_pull',
-      label: 'Git pull',
-      commitHash: snapshot.head,
-      metadata: { reflog: reflogSubject }
-    };
-  }
-
-  if (normalized.startsWith('merge') || (await isMergeCommit(rootPath, snapshot.head))) {
-    return {
-      type: 'git_merge',
-      label: 'Git merge',
-      commitHash: snapshot.head,
-      metadata: { reflog: reflogSubject }
-    };
-  }
-
-  return {
-    type: 'git_commit',
-    label: 'Git commit',
-    commitHash: snapshot.head,
-    metadata: { commitHash: snapshot.head, commitCreatedAt, commitSubject }
-  };
+  return classifyHeadChange(snapshot, {
+    reflogSubject,
+    commitCreatedAt,
+    commitSubject,
+    isMergeCommit: await isMergeCommit(rootPath, snapshot.head)
+  });
 }
 
 async function classifyGitActivity(rootPath: string, previous: GitSnapshot, snapshot: GitSnapshot): Promise<GitActivity | null> {
-  if (!previous.hasConflicts && snapshot.hasConflicts) {
-    return {
-      type: 'git_conflict',
-      label: 'Git conflict',
-      commitHash: snapshot.head
-    };
-  }
-
-  if (previous.stashHash !== snapshot.stashHash) {
-    return {
-      type: 'git_stash',
-      label: 'Git stash',
-      commitHash: snapshot.head
-    };
-  }
-
-  if (
-    previous.head === snapshot.head &&
-    previous.remoteHead !== null &&
-    snapshot.remoteHead !== null &&
-    previous.remoteHead !== snapshot.remoteHead &&
-    snapshot.remoteHead === snapshot.head
-  ) {
-    return {
-      type: 'git_push',
-      label: 'Git push',
-      commitHash: snapshot.head,
-      metadata: {
-        previousRemoteHead: previous.remoteHead,
-        remoteHead: snapshot.remoteHead,
-        branchName: snapshot.branch
-      }
-    };
-  }
-
-  if (previous.mergeInProgress && !snapshot.mergeInProgress && previous.head !== snapshot.head) {
-    return {
-      type: 'git_merge',
-      label: 'Git merge',
-      commitHash: snapshot.head
-    };
-  }
-
-  if (previous.rebaseInProgress !== snapshot.rebaseInProgress) {
-    return {
-      type: 'git_rebase',
-      label: 'Git rebase',
-      commitHash: snapshot.head
-    };
-  }
-
-  if (previous.branch !== snapshot.branch) {
-    return {
-      type: 'git_branch_switch',
-      label: 'Git branch switch',
-      commitHash: snapshot.head
-    };
-  }
-
-  if (previous.head !== snapshot.head) {
-    return classifyHeadChange(rootPath, snapshot);
-  }
-
-  return null;
+  const transition = classifySnapshotTransition(previous, snapshot);
+  return transition === 'head_change'
+    ? classifyChangedHead(rootPath, snapshot)
+    : transition;
 }
 
 function isReleaseBranchPush(activity: GitActivity): boolean {
@@ -313,42 +212,11 @@ function getActivityInput(activity: GitActivity): ActivityEventInput {
   };
 }
 
-async function shouldSkipForCooldown(
-  state: GameState,
-  activity: GitActivity,
-  onActivitySkipped?: (activity: GitActivity, remainingMs: number) => Promise<void>
-): Promise<boolean> {
-  const now = Date.now();
-  const last = state.cooldowns.lastEncounterAt ? Date.parse(state.cooldowns.lastEncounterAt) : 0;
-  const isHealing = state.cooldowns.healingStartedAt !== null && state.player.hp < state.player.maxHp;
-
-  if (state.town.inTown) {
-    return true;
-  }
-
-  if (isHealing && activity.type !== 'git_commit') {
-    return true;
-  }
-
-  if (activity.type === 'git_commit' && activity.commitHash) {
-    state.cooldowns.lastCommitHash = activity.commitHash;
-  }
-
-  if (!isHealing && now - last < GIT_ENCOUNTER_COOLDOWN_MS) {
-    const remainingMs = GIT_ENCOUNTER_COOLDOWN_MS - (now - last);
-    await onActivitySkipped?.(activity, remainingMs);
-    return true;
-  }
-
-  state.cooldowns.lastEncounterAt = new Date().toISOString();
-  return false;
-}
-
 export function initializeGitIntegration(
   context: vscode.ExtensionContext,
   getState: () => GameState,
   onGitActivity: (activity: ActivityEventInput) => Promise<void>,
-  onActivitySkipped?: (activity: GitActivity, remainingMs: number) => Promise<void>,
+  onActivitySkipped?: (activity: GitActivity, skip: GitRewardSkip) => Promise<void>,
   debugLog?: (message: string) => void
 ): void {
   const debug = (message: string) => {
@@ -359,6 +227,52 @@ export function initializeGitIntegration(
     const ext = vscode.extensions.getExtension('vscode.git');
 
     const watchedRoots = new Map<string, WatchState>();
+    const activityAggregators = new Map<string, GitActivityAggregator>();
+
+    const processActivityBatch = async (rootPath: string, batch: GitActivityBatch) => {
+      const releasePush = batch.activities.find(isReleaseBranchPush);
+      if (releasePush) {
+        recordReleasePush(getState());
+        batch.activity.metadata = {
+          ...(batch.activity.metadata || {}),
+          releasePush: true,
+          releasePushCounted: true,
+          releaseBranchName: releasePush.metadata?.branchName
+        };
+        debug(`release push counted for ${rootPath} on branch ${String(releasePush.metadata?.branchName || 'n/a')}`);
+      }
+
+      const state = getState();
+      const rewardGate = applyGitRewardGate(state, batch.activity);
+      if (!rewardGate.accepted) {
+        await onActivitySkipped?.(batch.activity, rewardGate);
+        debug(`activity burst skipped for ${rootPath}: ${rewardGate.reason}`);
+        return;
+      }
+
+      debug(`dispatching ${batch.activity.type} burst for ${rootPath} (${batch.activities.length} activities)`);
+      await onGitActivity(getActivityInput(batch.activity));
+    };
+
+    const getActivityAggregator = (rootPath: string): GitActivityAggregator => {
+      const existing = activityAggregators.get(rootPath);
+      if (existing) {
+        return existing;
+      }
+
+      const created = new GitActivityAggregator((batch) => processActivityBatch(rootPath, batch));
+      activityAggregators.set(rootPath, created);
+      return created;
+    };
+
+    context.subscriptions.push({
+      dispose: () => {
+        for (const aggregator of activityAggregators.values()) {
+          aggregator.dispose();
+        }
+        activityAggregators.clear();
+      }
+    });
 
     const ensureWatchState = (rootPath: string): WatchState => {
       const existing = watchedRoots.get(rootPath);
@@ -410,28 +324,14 @@ export function initializeGitIntegration(
 
         debug(`classified ${activity.type} on ${rootPath} (${activity.label})`);
 
-        if (isReleaseBranchPush(activity)) {
-          recordReleasePush(getState());
-          activity.metadata = {
-            ...(activity.metadata || {}),
-            releasePushCounted: true
-          };
-          debug(`release push counted for ${rootPath} on branch ${String(activity.metadata?.branchName || 'n/a')}`);
-        }
-
         const state = getState();
         if (activity.type === 'git_commit' && activity.commitHash && state.cooldowns.lastCommitHash === activity.commitHash) {
           debug(`commit ignored for ${rootPath}: same commit hash ${activity.commitHash}`);
           return;
         }
 
-        if (await shouldSkipForCooldown(state, activity, onActivitySkipped)) {
-          debug(`activity skipped for ${rootPath}: cooldown or town/healing guard`);
-          return;
-        }
-
-        debug(`dispatching ${activity.type} for ${rootPath}`);
-        await onGitActivity(getActivityInput(activity));
+        getActivityAggregator(rootPath).add(activity);
+        debug(`queued ${activity.type} for ${rootPath}; aggregation window reset`);
       } catch (error) {
         debug(`error inspecting ${rootPath}: ${error instanceof Error ? error.message : String(error)}`);
         console.error('Merge & Magic git activity trigger failed', error);

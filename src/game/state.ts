@@ -33,7 +33,7 @@ export function createInitialEquipment(): Record<EquipmentSlotType, EquipmentSlo
 
 export function createInitialGameState(): GameState {
   return {
-    version: 3,
+    version: 4,
     player: {
       name: '',
       suffix: '',
@@ -60,7 +60,9 @@ export function createInitialGameState(): GameState {
     },
     progress: createInitialAchievementProgress(),
     focus: {
-      activeMs: 0
+      activeMs: 0,
+      lastActivityAt: null,
+      decayAppliedAt: null
     },
     cooldowns: {
       lastEncounterAt: null,

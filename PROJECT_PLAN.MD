@@ -237,7 +237,7 @@ await context.globalState.update(SAVE_KEY, state);
 - Use built-in Git API if available.
 - Detect HEAD commit hash changes.
 - Trigger encounter on new commit.
-- Apply cooldown: 5 minutes max.
+- Aggregate Git activity until 30 seconds after the latest command, then apply a 2-minute encounter cooldown.
 - Ignore repeated commit hashes.
 
 ## Webview Architecture

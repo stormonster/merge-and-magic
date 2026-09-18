@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { processActivityEvent } from './processor';
 import { GameState } from '../game/types';
 import { isHealing } from '../game/health';
+import { applyFocusDecay, recordFocusActivity } from './focusProgress';
 
 const FOCUS_TARGET_MS = 5 * 60 * 1000;
 const FOCUS_TICK_MS = 15 * 1000;
@@ -87,16 +88,25 @@ export function initializeFocusTracker(context: vscode.ExtensionContext, options
 }
 
 async function processFocusTick(options: FocusTrackerOptions, activitySeen: boolean): Promise<void> {
-  if (!activitySeen) {
-    return;
-  }
-
   const state = options.getState();
-  if (state.town.inTown || isHealing(state)) {
+  const now = Date.now();
+  const focusDecayed = applyFocusDecay(state.focus, now);
+
+  if (!activitySeen) {
+    if (focusDecayed) {
+      await options.onStateChanged();
+    }
     return;
   }
 
-  state.focus.activeMs += FOCUS_TICK_MS;
+  if (state.town.inTown || isHealing(state)) {
+    if (focusDecayed) {
+      await options.onStateChanged();
+    }
+    return;
+  }
+
+  recordFocusActivity(state.focus, FOCUS_TICK_MS, now);
   await options.onStateChanged();
 
   if (state.focus.activeMs < FOCUS_TARGET_MS) {

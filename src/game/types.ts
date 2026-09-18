@@ -92,7 +92,7 @@ export type Player = {
 export type GameLogEntry = {
   id: string;
   createdAt: string;
-  type: 'encounter' | 'loot_equipped' | 'loot_missed' | 'level_up' | 'system' | 'loot_chest';
+  type: 'encounter' | 'elite_encounter' | 'boss_encounter' | 'raid_encounter' | 'loot_equipped' | 'loot_missed' | 'level_up' | 'system' | 'loot_chest';
   message: string;
   highlights?: {
     text: string;
@@ -105,6 +105,12 @@ export type PendingLootItem = {
   item: Item;
   triggerLabel: string;
   createdAt: string;
+};
+
+export type FocusProgress = {
+  activeMs: number;
+  lastActivityAt: string | null;
+  decayAppliedAt: string | null;
 };
 
 export type GameState = {
@@ -138,9 +144,7 @@ export type GameState = {
     midnightCommits: number;
     maxGreedWins: number;
   };
-  focus: {
-    activeMs: number;
-  };
+  focus: FocusProgress;
   cooldowns: {
     lastEncounterAt: string | null;
     lastCommitHash: string | null;

@@ -1,9 +1,18 @@
-import { GameLogEntry, GameState, EquipmentSlotType, Item } from './types';
+import { Enemy, GameLogEntry, GameState, EquipmentSlotType, Item, Rarity } from './types';
+import { EncounterTier } from '../activity/encounterTier';
 import { addLogEntry, createInitialGameState } from './state';
 import { calculateWinChance } from './combat';
 import { applyXp } from './progression';
-import { handleLootDrop, createItem, selectItemRarity, getGreedBonus } from './loot';
-import { pickRandomEnemy } from './encounters';
+import {
+  handleLootDrop,
+  createItem,
+  selectBossItemRarity,
+  selectEliteItemRarity,
+  selectItemRarity,
+  selectRaidItemRarity,
+  getGreedBonus
+} from './loot';
+import { pickRandomBoss, pickRandomElite, pickRandomEnemy, pickRandomRaidBoss } from './encounters';
 import { randomInt } from './random';
 import { calculateDefeatDamage, startHealingIfNeeded } from './health';
 import {
@@ -21,6 +30,15 @@ type ActivityTriggerOptions = {
   afterLog?: () => Promise<void>;
   logDelayMs?: number;
 };
+
+type EncounterTriggerOptions = ActivityTriggerOptions & {
+  enemy?: Enemy;
+  random?: () => number;
+};
+
+export const BOSS_MINIMUM_LOOT_CHANCE = 0.8;
+export const ELITE_MINIMUM_LOOT_CHANCE = 0.6;
+export const RAID_MINIMUM_LOOT_CHANCE = 1;
 
 type LootChestOpenOptions = {
   onReveal?: (item: Item, index: number, total: number) => Promise<void>;
@@ -156,12 +174,44 @@ export async function triggerTestLoot(state: GameState, options?: ActivityTrigge
   );
 }
 
-export async function triggerEncounter(state: GameState, options?: ActivityTriggerOptions): Promise<void> {
-  const enemy = pickRandomEnemy();
+async function resolveEncounter(
+  state: GameState,
+  options: EncounterTriggerOptions | undefined,
+  tier: EncounterTier
+): Promise<void> {
+  const enemy = options?.enemy || (
+    tier === 'raid'
+      ? pickRandomRaidBoss()
+      : tier === 'boss'
+        ? pickRandomBoss()
+        : tier === 'elite'
+          ? pickRandomElite()
+          : pickRandomEnemy()
+  );
   const chance = calculateWinChance(state.player, enemy);
-  const won = Math.random() <= chance;
+  const random = options?.random || Math.random;
+  const won = random() <= chance;
   recordEncounter(state);
-  await addTimedLogEntry(state, 'encounter', `⚔ Encounter: ${enemy.name} appeared.\nTrigger: ${getTriggerLabel(options)}`, options);
+  const encounterType: GameState['log'][0]['type'] = tier === 'raid'
+    ? 'raid_encounter'
+    : tier === 'boss'
+      ? 'boss_encounter'
+      : tier === 'elite'
+        ? 'elite_encounter'
+        : 'encounter';
+  const encounterMessage = tier === 'raid'
+    ? `⚡ RAID ENCOUNTER: ${enemy.name} threatens the release!`
+    : tier === 'boss'
+      ? `🔥 BOSS ENCOUNTER: ${enemy.name} has emerged!`
+      : tier === 'elite'
+        ? `◆ ELITE ENCOUNTER: ${enemy.name} blocks your path!`
+        : `⚔ Encounter: ${enemy.name} appeared.`;
+  await addTimedLogEntry(
+    state,
+    encounterType,
+    `${encounterMessage}\nTrigger: ${getTriggerLabel(options)}`,
+    options
+  );
 
   if (!won) {
     recordDefeat(state);
@@ -170,7 +220,9 @@ export async function triggerEncounter(state: GameState, options?: ActivityTrigg
     await addTimedLogEntry(
       state,
       'system',
-      `❌ Defeat: ${enemy.name} dealt ${damage} damage.`,
+      tier === 'normal'
+        ? `❌ Defeat: ${enemy.name} dealt ${damage} damage.`
+        : `☠ ${tier.toUpperCase()} DEFEAT: ${enemy.name} dealt ${damage} damage.`,
       options
     );
     if (startHealingIfNeeded(state)) {
@@ -182,14 +234,29 @@ export async function triggerEncounter(state: GameState, options?: ActivityTrigg
 
   state.player.gold += enemy.goldReward;
   const xpMessages = applyXp(state.player, enemy.xpReward);
-  await addTimedLogEntry(state, 'system', `✅ Victory: Defeated ${enemy.name}. Gained ${enemy.xpReward} XP and ${enemy.goldReward} gold.`, options);
+  await addTimedLogEntry(
+    state,
+    'system',
+    tier === 'normal'
+      ? `✅ Victory: Defeated ${enemy.name}. Gained ${enemy.xpReward} XP and ${enemy.goldReward} gold.`
+      : `🏆 ${tier.toUpperCase()} DEFEATED: ${enemy.name}. Claimed ${enemy.xpReward} XP and ${enemy.goldReward} gold!`,
+    options
+  );
   for (const message of xpMessages) {
     await addTimedLogEntry(state, 'level_up', message, options);
   }
 
   const unlockedSlots = Object.values(state.player.equipment).filter((slot) => !slot.locked).length;
   const greedBonus = getGreedBonus(unlockedSlots);
-  const lootChance = Math.min(0.95, Math.max(0.05, enemy.baseLootDropChance + greedBonus));
+  const minimumLootChance = tier === 'raid'
+    ? RAID_MINIMUM_LOOT_CHANCE
+    : tier === 'boss'
+      ? BOSS_MINIMUM_LOOT_CHANCE
+      : tier === 'elite'
+        ? ELITE_MINIMUM_LOOT_CHANCE
+        : 0.05;
+  const maximumLootChance = tier === 'raid' ? 1 : tier === 'normal' ? 0.95 : 0.98;
+  const lootChance = Math.min(maximumLootChance, Math.max(minimumLootChance, enemy.baseLootDropChance + greedBonus));
 
   if (unlockedSlots >= Object.values(state.player.equipment).length) {
     recordMaxGreedVictory(state);
@@ -198,21 +265,69 @@ export async function triggerEncounter(state: GameState, options?: ActivityTrigg
     recordMinimalistVictory(state);
   }
 
-  await addTimedLogEntry(state, 'system', `🎲 Greed Bonus: ${unlockedSlots} unlocked slots gave +${Math.round(greedBonus * 100)}% loot chance.`, options);
+  await addTimedLogEntry(
+    state,
+    'system',
+    tier === 'raid'
+      ? '🎲 Raid Reward: guaranteed raid loot with exceptional rarity odds.'
+      : tier === 'boss'
+        ? `🎲 Boss Reward: ${Math.round(lootChance * 100)}% boss loot chance with upgraded rarity odds.`
+        : tier === 'elite'
+          ? `🎲 Elite Reward: ${Math.round(lootChance * 100)}% elite loot chance with improved rarity odds.`
+          : `🎲 Greed Bonus: ${unlockedSlots} unlocked slots gave +${Math.round(greedBonus * 100)}% loot chance.`,
+    options
+  );
 
-  if (Math.random() > lootChance) {
-    await addTimedLogEntry(state, 'system', `🗡 No loot dropped from ${enemy.name}.`, options);
+  if (random() > lootChance) {
+    await addTimedLogEntry(
+      state,
+      'system',
+      tier === 'normal'
+        ? `🗡 No loot dropped from ${enemy.name}.`
+        : `🗡 ${enemy.name} guarded its hoard this time.`,
+      options
+    );
     return;
   }
 
-  const rarity = selectItemRarity(Object.values(state.player.equipment).filter((slot) => slot.locked).length);
+  const lockedSlotCount = Object.values(state.player.equipment).filter((slot) => slot.locked).length;
+  const rarity: Rarity = tier === 'raid'
+    ? selectRaidItemRarity(lockedSlotCount)
+    : tier === 'boss'
+      ? selectBossItemRarity(lockedSlotCount)
+      : tier === 'elite'
+        ? selectEliteItemRarity(lockedSlotCount)
+        : selectItemRarity(lockedSlotCount);
   const template = ITEM_TEMPLATES[randomInt(0, ITEM_TEMPLATES.length - 1)];
-  const item = createItem(state.player.level, rarity, template);
+  const itemLevelBonus = tier === 'raid' ? 2 : tier === 'normal' ? 0 : 1;
+  const item = createItem(state.player.level + itemLevelBonus, rarity, template);
   queueLootDrop(state, item, options);
   await addTimedLogEntry(
     state,
     'loot_chest',
-    `${enemy.name} dropped a loot chest! Open it to reveal your reward.\nTrigger: ${getTriggerLabel(options)}`,
+    tier === 'raid'
+      ? `${enemy.name} dropped a mythic raid vault! Open it to claim your reward.\nTrigger: ${getTriggerLabel(options)}`
+      : tier === 'boss'
+        ? `${enemy.name} dropped a radiant boss chest! Open it to claim your reward.\nTrigger: ${getTriggerLabel(options)}`
+        : tier === 'elite'
+          ? `${enemy.name} dropped an elite chest! Open it to claim your reward.\nTrigger: ${getTriggerLabel(options)}`
+          : `${enemy.name} dropped a loot chest! Open it to reveal your reward.\nTrigger: ${getTriggerLabel(options)}`,
     options
   );
+}
+
+export async function triggerEncounter(state: GameState, options?: ActivityTriggerOptions): Promise<void> {
+  await resolveEncounter(state, options, 'normal');
+}
+
+export async function triggerBossEncounter(state: GameState, options?: EncounterTriggerOptions): Promise<void> {
+  await resolveEncounter(state, options, 'boss');
+}
+
+export async function triggerTierEncounter(
+  state: GameState,
+  tier: EncounterTier,
+  options?: EncounterTriggerOptions
+): Promise<void> {
+  await resolveEncounter(state, options, tier);
 }

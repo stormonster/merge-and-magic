@@ -1,4 +1,4 @@
-import { triggerEncounter, triggerTestLoot } from '../game/engine';
+import { triggerTierEncounter, triggerTestLoot } from '../game/engine';
 import { addLogEntry, upsertLogEntryByPrefix } from '../game/state';
 import { GameState } from '../game/types';
 import { applyPassiveHealing, healToFull, isHealing } from '../game/health';
@@ -11,6 +11,8 @@ import {
   recordTestPass
 } from '../game/achievements';
 import { ActivityEvent, ActivityEventInput } from './types';
+import { getActivityReward } from './rewards';
+import { getEncounterTier } from './encounterTier';
 
 const ACTIVITY_LOG_LIMIT = 100;
 const DEFAULT_LOG_DELAY_MS = 1000;
@@ -71,6 +73,8 @@ export async function processActivityEvent(
     logDelayMs: options?.logDelayMs ?? DEFAULT_LOG_DELAY_MS
   };
 
+  const reward = getActivityReward(event.type);
+
   switch (event.type) {
     case 'manual_encounter':
     case 'git_commit':
@@ -79,7 +83,9 @@ export async function processActivityEvent(
     case 'git_merge':
     case 'git_rebase':
     case 'git_conflict':
+    case 'git_conflict_resolved':
     case 'git_stash':
+    case 'git_branch_switch':
       if (event.type === 'git_commit') {
         const commitCreatedAt = event.metadata?.commitCreatedAt ? new Date(String(event.metadata.commitCreatedAt)) : new Date(event.createdAt);
         recordCommit(state, commitCreatedAt, String(event.metadata?.commitSubject || ''));
@@ -103,16 +109,11 @@ export async function processActivityEvent(
           await options.afterLog();
         }
       }
-      await triggerEncounter(state, activityOptions);
-      break;
-    case 'git_branch_switch':
-      addLogEntry(state, 'system', `🔀 Branch switch: ${event.metadata?.branchName ? String(event.metadata.branchName) : 'updated'}\nTrigger: ${event.label}`);
-      if (options?.afterLog) {
-        await options.afterLog();
+      if (event.type === 'git_branch_switch') {
+        addLogEntry(state, 'system', `🔀 Branch switch: ${event.metadata?.branchName ? String(event.metadata.branchName) : 'updated'}\nTrigger: ${event.label}`);
       }
       break;
     case 'manual_loot':
-      await triggerTestLoot(state, activityOptions);
       break;
     case 'focus_session':
       addLogEntry(state, 'system', `Focus session completed.\nTrigger: ${event.label}`);
@@ -143,6 +144,12 @@ export async function processActivityEvent(
         await options.afterLog();
       }
       break;
+  }
+
+  if (reward === 'encounter' || reward === 'boss_encounter') {
+    await triggerTierEncounter(state, getEncounterTier(event.type, event.metadata), activityOptions);
+  } else if (reward === 'loot') {
+    await triggerTestLoot(state, activityOptions);
   }
 
   return event;

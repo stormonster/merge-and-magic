@@ -8,6 +8,7 @@ export type ActivityEventType =
   | 'git_merge'
   | 'git_rebase'
   | 'git_conflict'
+  | 'git_conflict_resolved'
   | 'git_stash'
   | 'tests_passed'
   | 'tests_failed'

@@ -16,6 +16,33 @@ const BASE_RARITY_WEIGHTS: Record<Rarity, number> = {
   mythic: 0.1,
 };
 
+const BOSS_RARITY_WEIGHTS: Record<Rarity, number> = {
+  common: 15,
+  uncommon: 35,
+  rare: 30,
+  epic: 15,
+  legendary: 4.5,
+  mythic: 0.5,
+};
+
+const ELITE_RARITY_WEIGHTS: Record<Rarity, number> = {
+  common: 35,
+  uncommon: 35,
+  rare: 20,
+  epic: 8,
+  legendary: 1.8,
+  mythic: 0.2,
+};
+
+const RAID_RARITY_WEIGHTS: Record<Rarity, number> = {
+  common: 0,
+  uncommon: 15,
+  rare: 35,
+  epic: 30,
+  legendary: 17,
+  mythic: 3,
+};
+
 const RARITY_LABEL: Record<Rarity, string> = {
   common: "Common",
   uncommon: "Uncommon",
@@ -171,6 +198,50 @@ export function getAdjustedRarityWeights(
 export function selectItemRarity(lockedSlotCount: number): Rarity {
   const weights = getAdjustedRarityWeights(lockedSlotCount);
   return weightedRandom(weights);
+}
+
+export function getBossRarityWeights(
+  lockedSlotCount: number,
+): Record<Rarity, number> {
+  const debuff = getLockDebuff(lockedSlotCount);
+  const highRarityPenalty = clamp(1 - debuff, 0.5, 1);
+
+  return {
+    common: BOSS_RARITY_WEIGHTS.common + lockedSlotCount,
+    uncommon: BOSS_RARITY_WEIGHTS.uncommon,
+    rare: BOSS_RARITY_WEIGHTS.rare * highRarityPenalty,
+    epic: BOSS_RARITY_WEIGHTS.epic * highRarityPenalty,
+    legendary: BOSS_RARITY_WEIGHTS.legendary * highRarityPenalty,
+    mythic: BOSS_RARITY_WEIGHTS.mythic * highRarityPenalty,
+  };
+}
+
+export function selectBossItemRarity(lockedSlotCount: number): Rarity {
+  return weightedRandom(getBossRarityWeights(lockedSlotCount));
+}
+
+function getTierRarityWeights(
+  baseWeights: Record<Rarity, number>,
+  lockedSlotCount: number,
+): Record<Rarity, number> {
+  const highRarityPenalty = clamp(1 - getLockDebuff(lockedSlotCount), 0.5, 1);
+
+  return {
+    common: baseWeights.common + lockedSlotCount,
+    uncommon: baseWeights.uncommon,
+    rare: baseWeights.rare * highRarityPenalty,
+    epic: baseWeights.epic * highRarityPenalty,
+    legendary: baseWeights.legendary * highRarityPenalty,
+    mythic: baseWeights.mythic * highRarityPenalty,
+  };
+}
+
+export function selectEliteItemRarity(lockedSlotCount: number): Rarity {
+  return weightedRandom(getTierRarityWeights(ELITE_RARITY_WEIGHTS, lockedSlotCount));
+}
+
+export function selectRaidItemRarity(lockedSlotCount: number): Rarity {
+  return weightedRandom(getTierRarityWeights(RAID_RARITY_WEIGHTS, lockedSlotCount));
 }
 
 export function createItem(
