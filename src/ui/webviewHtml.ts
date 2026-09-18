@@ -3,9 +3,10 @@ import { GameLogEntry, GameState, EquipmentSlot, EquipmentSlotType, Rarity } fro
 import { xpRequiredForNextLevel } from '../game/progression';
 import { TITLE_METADATA, getAvailableTitleIds, getTitleLabel, TitleId } from '../game/titles';
 import { ACHIEVEMENT_DEFINITIONS } from '../game/achievements';
+import { GIT_ENCOUNTER_COOLDOWN_MS } from '../git/rewardGate';
 
 const FOCUS_TARGET_MS = 5 * 60 * 1000;
-const COMMIT_ENCOUNTER_COOLDOWN_MS = 5 * 60 * 1000;
+const COMMIT_ENCOUNTER_COOLDOWN_MS = GIT_ENCOUNTER_COOLDOWN_MS;
 const TOWN_ENTRY_COOLDOWN_MS = 5 * 60 * 1000;
 const slotLabels: Record<EquipmentSlotType, string> = {
   helmet: 'Helmet',

@@ -1005,7 +1005,7 @@ Pseudo-flow:
 
 Important anti-spam rules:
 
-- One commit-triggered encounter every 5 minutes max.
+- One Git burst encounter after 30 seconds without another Git command, followed by a 2-minute cooldown.
 - Ignore empty or repeated commit hashes.
 - Store last seen commit hash.
 
@@ -1026,7 +1026,7 @@ Recommended cooldowns:
 
 ```text
 Manual test encounter: no cooldown in development mode
-Commit encounter: 5 minutes
+Git burst encounter: 2 minutes after a resettable 30-second aggregation window
 Focus session encounter: 25 minutes
 ```
 

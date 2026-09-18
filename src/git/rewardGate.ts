@@ -2,7 +2,7 @@ import { getActivityReward, ActivityReward } from '../activity/rewards';
 import { ActivityEventType } from '../activity/types';
 import { GameState } from '../game/types';
 
-export const GIT_ENCOUNTER_COOLDOWN_MS = 5 * 60 * 1000;
+export const GIT_ENCOUNTER_COOLDOWN_MS = 2 * 60 * 1000;
 
 type GitRewardActivity = {
   type: ActivityEventType;

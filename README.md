@@ -44,7 +44,7 @@ Merge & Magic listens for normal development activity and turns some of it into 
 
 Editor activity builds toward a focus session. After 5 minutes of observed activity, the session completes.
 
-Git activity can trigger encounters, including commits, branch switches, pulls, pushes, merges, conflicts, and stashes. Git-triggered encounters have a 5-minute cooldown so normal repo work does not flood your log.
+Git activity can trigger encounters, including commits, branch switches, pulls, pushes, merges, conflicts, and stashes. Commands are collected into a burst that resolves 30 seconds after the latest Git activity, followed by a 2-minute encounter cooldown.
 
 When an encounter starts, your character fights a random enemy. Victory grants XP and gold, and may drop an item. Defeat deals damage. If your HP gets too low, recovery starts and activity rewards pause until you heal.
 
@@ -59,7 +59,7 @@ Merge & Magic rewards activity in a few different ways:
 - **Hero identity** starts with a name and title prompt, and can later be edited from the settings drawer.
 - **Achievements** track long-term goals and can reward titles when unlocked.
 
-Some activity is intentionally throttled. Git-triggered encounters have a 5-minute cooldown, and town entry has a 5-minute cooldown. While you are in town or recovering from defeat, most activity rewards pause.
+Some activity is intentionally throttled. Git activity is grouped into resettable 30-second bursts, with one encounter and a 2-minute cooldown per burst. Town entry has a 5-minute cooldown. While you are in town or recovering from defeat, most activity rewards pause.
 
 ## Loot And Locks
 

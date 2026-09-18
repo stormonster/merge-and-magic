@@ -12,6 +12,7 @@ import {
   GitActivity,
   GitSnapshot
 } from './activityClassifier';
+import { GitActivityAggregator, GitActivityBatch } from './activityAggregator';
 import { applyGitRewardGate, GitRewardSkip } from './rewardGate';
 
 const execFile = util.promisify(cp.execFile);
@@ -226,6 +227,52 @@ export function initializeGitIntegration(
     const ext = vscode.extensions.getExtension('vscode.git');
 
     const watchedRoots = new Map<string, WatchState>();
+    const activityAggregators = new Map<string, GitActivityAggregator>();
+
+    const processActivityBatch = async (rootPath: string, batch: GitActivityBatch) => {
+      const releasePush = batch.activities.find(isReleaseBranchPush);
+      if (releasePush) {
+        recordReleasePush(getState());
+        if (batch.activity.type === 'git_push') {
+          batch.activity.metadata = {
+            ...(batch.activity.metadata || {}),
+            releasePushCounted: true
+          };
+        }
+        debug(`release push counted for ${rootPath} on branch ${String(releasePush.metadata?.branchName || 'n/a')}`);
+      }
+
+      const state = getState();
+      const rewardGate = applyGitRewardGate(state, batch.activity);
+      if (!rewardGate.accepted) {
+        await onActivitySkipped?.(batch.activity, rewardGate);
+        debug(`activity burst skipped for ${rootPath}: ${rewardGate.reason}`);
+        return;
+      }
+
+      debug(`dispatching ${batch.activity.type} burst for ${rootPath} (${batch.activities.length} activities)`);
+      await onGitActivity(getActivityInput(batch.activity));
+    };
+
+    const getActivityAggregator = (rootPath: string): GitActivityAggregator => {
+      const existing = activityAggregators.get(rootPath);
+      if (existing) {
+        return existing;
+      }
+
+      const created = new GitActivityAggregator((batch) => processActivityBatch(rootPath, batch));
+      activityAggregators.set(rootPath, created);
+      return created;
+    };
+
+    context.subscriptions.push({
+      dispose: () => {
+        for (const aggregator of activityAggregators.values()) {
+          aggregator.dispose();
+        }
+        activityAggregators.clear();
+      }
+    });
 
     const ensureWatchState = (rootPath: string): WatchState => {
       const existing = watchedRoots.get(rootPath);
@@ -277,30 +324,14 @@ export function initializeGitIntegration(
 
         debug(`classified ${activity.type} on ${rootPath} (${activity.label})`);
 
-        if (isReleaseBranchPush(activity)) {
-          recordReleasePush(getState());
-          activity.metadata = {
-            ...(activity.metadata || {}),
-            releasePushCounted: true
-          };
-          debug(`release push counted for ${rootPath} on branch ${String(activity.metadata?.branchName || 'n/a')}`);
-        }
-
         const state = getState();
         if (activity.type === 'git_commit' && activity.commitHash && state.cooldowns.lastCommitHash === activity.commitHash) {
           debug(`commit ignored for ${rootPath}: same commit hash ${activity.commitHash}`);
           return;
         }
 
-        const rewardGate = applyGitRewardGate(state, activity);
-        if (!rewardGate.accepted) {
-          await onActivitySkipped?.(activity, rewardGate);
-          debug(`activity skipped for ${rootPath}: ${rewardGate.reason}`);
-          return;
-        }
-
-        debug(`dispatching ${activity.type} for ${rootPath}`);
-        await onGitActivity(getActivityInput(activity));
+        getActivityAggregator(rootPath).add(activity);
+        debug(`queued ${activity.type} for ${rootPath}; aggregation window reset`);
       } catch (error) {
         debug(`error inspecting ${rootPath}: ${error instanceof Error ? error.message : String(error)}`);
         console.error('Merge & Magic git activity trigger failed', error);

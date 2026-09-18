@@ -2,6 +2,13 @@
 
 All notable changes to Merge & Magic will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- Group Git commands into resettable 30-second activity bursts so related actions produce one representative encounter.
+- Reduced the Git encounter cooldown from 5 minutes to 2 minutes.
+
 ## [0.3.0] - 2026-09-10
 
 ### Added

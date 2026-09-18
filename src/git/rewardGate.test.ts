@@ -21,7 +21,7 @@ test('active cooldown returns its remaining time without moving the cooldown', (
 
   const result = applyGitRewardGate(state, { type: 'git_push' }, now);
 
-  assert.deepEqual(result, { accepted: false, reason: 'cooldown', remainingMs: 240_000 });
+  assert.deepEqual(result, { accepted: false, reason: 'cooldown', remainingMs: 60_000 });
   assert.equal(state.cooldowns.lastEncounterAt, new Date(now - 60_000).toISOString());
 });
 
