@@ -1,6 +1,5 @@
 import * as cp from 'child_process';
 import * as fs from 'fs/promises';
-import * as path from 'path';
 import * as util from 'util';
 import * as vscode from 'vscode';
 import { ActivityEventInput } from '../activity/types';
@@ -17,12 +16,17 @@ import { applyGitRewardGate, GitRewardSkip } from './rewardGate';
 
 const execFile = util.promisify(cp.execFile);
 const INSPECT_DEBOUNCE_MS = 400;
-const FALLBACK_POLL_MS = 10 * 1000;
+const FALLBACK_POLL_MS = 90 * 1000;
+// git ls-remote is a network call; only pay that cost occasionally, not on every inspection.
+const REMOTE_CHECK_INTERVAL_MS = 5 * 60 * 1000;
 
 type WatchState = {
   repo: any | null;
   snapshot: GitSnapshot | null;
   pendingTimer: NodeJS.Timeout | null;
+  inspecting: boolean;
+  remoteHead: string | null;
+  lastRemoteCheck: number;
 };
 
 async function runGit(rootPath: string, args: string[]): Promise<string> {
@@ -70,10 +74,6 @@ async function hasRebaseInProgress(rootPath: string): Promise<boolean> {
   return (await gitPathExists(rootPath, 'rebase-merge')) || (await gitPathExists(rootPath, 'rebase-apply'));
 }
 
-async function isGitRepoRoot(candidatePath: string): Promise<boolean> {
-  return (await safeRunGit(candidatePath, ['rev-parse', '--show-toplevel'])) !== null;
-}
-
 function hasConflictStatus(statusOutput: string | null): boolean {
   if (!statusOutput) {
     return false;
@@ -115,7 +115,7 @@ async function getRemoteHead(rootPath: string, upstreamRef: string | null): Prom
   return remoteHead || null;
 }
 
-async function getSnapshot(rootPath: string, repo?: any): Promise<GitSnapshot | null> {
+async function getSnapshot(rootPath: string, repo?: any, watchState?: WatchState): Promise<GitSnapshot | null> {
   const headState = repo?.state?.HEAD;
   const head = headState?.commit || (await safeRunGit(rootPath, ['rev-parse', '--verify', 'HEAD']));
   const branch = headState?.name || (await safeRunGit(rootPath, ['branch', '--show-current'])) || null;
@@ -126,7 +126,15 @@ async function getSnapshot(rootPath: string, repo?: any): Promise<GitSnapshot | 
   const rebaseInProgress = await hasRebaseInProgress(rootPath);
   const ahead = typeof headState?.ahead === 'number' ? headState.ahead : null;
   const behind = typeof headState?.behind === 'number' ? headState.behind : null;
-  const remoteHead = await getRemoteHead(rootPath, upstreamRef);
+
+  const now = Date.now();
+  const dueForRemoteCheck = !watchState || now - watchState.lastRemoteCheck >= REMOTE_CHECK_INTERVAL_MS;
+  const remoteHead = dueForRemoteCheck ? await getRemoteHead(rootPath, upstreamRef) : watchState?.remoteHead ?? null;
+
+  if (watchState && dueForRemoteCheck) {
+    watchState.remoteHead = remoteHead;
+    watchState.lastRemoteCheck = now;
+  }
 
   return {
     branch,
@@ -283,7 +291,10 @@ export function initializeGitIntegration(
       const created = {
         repo: null,
         snapshot: null,
-        pendingTimer: null
+        pendingTimer: null,
+        inspecting: false,
+        remoteHead: null,
+        lastRemoteCheck: 0
       };
       watchedRoots.set(rootPath, created);
       return created;
@@ -295,8 +306,15 @@ export function initializeGitIntegration(
         return;
       }
 
+      // Avoid overlapping inspections of the same repo (e.g. a slow remote check still in flight).
+      if (watchState.inspecting) {
+        debug(`inspect skipped for ${rootPath}: previous inspection still running`);
+        return;
+      }
+
+      watchState.inspecting = true;
       try {
-        const snapshot = await getSnapshot(rootPath, watchState.repo);
+        const snapshot = await getSnapshot(rootPath, watchState.repo, watchState);
         if (!snapshot?.head) {
           debug(`inspect skipped for ${rootPath}: no head`);
           return;
@@ -335,6 +353,8 @@ export function initializeGitIntegration(
       } catch (error) {
         debug(`error inspecting ${rootPath}: ${error instanceof Error ? error.message : String(error)}`);
         console.error('Merge & Magic git activity trigger failed', error);
+      } finally {
+        watchState.inspecting = false;
       }
     };
 
@@ -377,25 +397,12 @@ export function initializeGitIntegration(
       const folders = vscode.workspace.workspaceFolders || [];
       const roots = new Set<string>();
 
+      // Only watch repos that are actually part of this workspace; never scan sibling
+      // directories, or every repo on the filesystem near it gets polled too.
       for (const folder of folders) {
         const rootPath = await safeRunGit(folder.uri.fsPath, ['rev-parse', '--show-toplevel']);
-        if (!rootPath) {
-          continue;
-        }
-
-        roots.add(rootPath);
-
-        const parentPath = path.dirname(rootPath);
-        const entries = await fs.readdir(parentPath, { withFileTypes: true }).catch(() => []);
-        for (const entry of entries) {
-          if (!entry.isDirectory()) {
-            continue;
-          }
-
-          const candidatePath = path.join(parentPath, entry.name);
-          if (await isGitRepoRoot(candidatePath)) {
-            roots.add(candidatePath);
-          }
+        if (rootPath) {
+          roots.add(rootPath);
         }
       }
 
@@ -429,13 +436,12 @@ export function initializeGitIntegration(
 
         await watchDiscoveredRepositories();
 
+        // Safety-net poll for changes onDidChange might miss; onDidChange already handles
+        // the common case, so this just re-discovers/re-inspects at a low frequency.
         const pollTimer = setInterval(() => {
           try {
             api?.repositories?.forEach((repo: any) => watchRepository(repo));
             void watchDiscoveredRepositories();
-            for (const rootPath of watchedRoots.keys()) {
-              scheduleInspect(rootPath);
-            }
           } catch {
             // ignore
           }
