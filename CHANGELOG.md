@@ -4,6 +4,8 @@ All notable changes to Merge & Magic will be documented in this file.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-21
+
 ### Added
 
 - Added boss encounters as the reward for completing 5 minutes of observed editor activity.
@@ -18,6 +20,10 @@ All notable changes to Merge & Magic will be documented in this file.
 - Reduced the Git encounter cooldown from 5 minutes to 2 minutes.
 - Focus progress now begins decaying after 1 hour without editor activity.
 - Elite, boss, and raid Git encounters can supersede an active normal encounter cooldown.
+
+### Fixed
+
+- Fixed Git activity tracking spawning excessive `git` processes and hammering the CPU by watching sibling directories outside the workspace, checking the remote (`git ls-remote`) on every poll, and polling every 10 seconds. Watching is now scoped to the actual workspace repos, the remote check is throttled to once every 5 minutes per repo, the fallback poll interval is now 90 seconds, and overlapping inspections of the same repo are prevented.
 
 ## [0.3.0] - 2026-09-10
 
